@@ -13,7 +13,8 @@
     "test:coverage": "vitest run --coverage",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "drizzle-kit studio",
+    "verify:boot": "node scripts/verify-migration-boot.mjs"
   },
   "dependencies": {
     "@ima-jin/auth": "^0.8.7",
