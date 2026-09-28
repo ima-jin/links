@@ -1,18 +1,22 @@
 openapi: "3.1.0"
 info:
-  title: imajin-app-template
+  title: imajin links
   version: "0.1.0"
   description: >
-    A third-party app on Imajin. This spec is served by the app itself at
-    /api/spec and aggregated by the kernel's service registry, the same way
-    every other app on the platform is discovered.
+    Link-in-bio pages with privacy-preserving click analytics, multiple links
+    per page, and theme presets. A third-party app on Imajin — this spec is
+    served by the app itself at /api/spec and aggregated by the kernel's
+    service registry, the same way every other app on the platform is
+    discovered.
 
 servers:
-  - url: http://localhost:3000
+  - url: https://dev-jin.imajin.ai/links
+    description: dev
+  - url: http://localhost:3102
     description: local
 
 tags:
-  - name: app-template
+  - name: links
 
 components:
   securitySchemes:
@@ -20,7 +24,48 @@ components:
       type: apiKey
       in: cookie
       name: imajin_session
+      description: >
+        The shared kernel session cookie, forwarded to the kernel's own
+        /api/session route. Works because this app is Caddy-routed
+        same-origin under the kernel host (a /links path prefix).
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: >
+        A scoped app token minted by POST {kernel}/auth/api/tokens/app
+        (#1069 Phase 1) and verified via @ima-jin/auth's
+        requireSessionOrAppToken — see src/lib/auth/authenticate.ts.
   schemas:
+    LinkPage:
+      type: object
+      properties:
+        id: { type: string }
+        did: { type: string }
+        handle: { type: string }
+        title: { type: string }
+        bio: { type: string, nullable: true }
+        avatar: { type: string, nullable: true }
+        avatarAssetId: { type: string, nullable: true }
+        theme: { type: object }
+        socialLinks: { type: object }
+        isPublic: { type: boolean }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    Link:
+      type: object
+      properties:
+        id: { type: string }
+        pageId: { type: string }
+        title: { type: string }
+        url: { type: string }
+        icon: { type: string, nullable: true }
+        thumbnail: { type: string, nullable: true }
+        position: { type: integer }
+        isActive: { type: boolean }
+        visibility: { type: string, enum: [public, authenticated] }
+        clicks: { type: integer }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
     Error:
       type: object
       required: [error]
@@ -30,9 +75,9 @@ components:
 paths:
   /api/health:
     get:
-      operationId: getHealth
-      summary: Health check
-      tags: [app-template]
+      operationId: healthCheck
+      summary: Service health check (includes a database round-trip)
+      tags: [links]
       responses:
         "200":
           description: Service is healthy
@@ -42,27 +87,484 @@ paths:
                 type: object
                 properties:
                   status: { type: string, example: ok }
-                  service: { type: string, example: imajin-app-template }
+                  service: { type: string, example: links }
                   timestamp: { type: string, format: date-time }
-
-  /api/me:
-    get:
-      operationId: getMe
-      summary: Return the signed-in caller's DID
-      tags: [app-template]
-      security:
-        - cookieAuth: []
-      responses:
-        "200":
-          description: The caller's DID
+        "503":
+          description: Database round-trip failed
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  did: { type: string }
-        "401":
-          description: Not authenticated
+                  status: { type: string, example: degraded }
+                  service: { type: string, example: links }
+                  timestamp: { type: string, format: date-time }
+
+  /api/spec:
+    get:
+      operationId: getSpec
+      summary: Serve this app's own OpenAPI spec YAML
+      tags: [links]
+      responses:
+        "200":
+          description: OpenAPI YAML document
+          content:
+            text/yaml:
+              schema:
+                type: string
+
+  /api/pages:
+    post:
+      operationId: createLinksPage
+      summary: Create a link-in-bio page — one per DID
+      tags: [links]
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [handle, title]
+              properties:
+                handle: { type: string, description: "3-30 chars, lowercase alphanumeric and underscores" }
+                title: { type: string }
+                bio: { type: string }
+                avatar: { type: string }
+                avatarAssetId: { type: string }
+                theme: { type: object }
+                themePreset: { type: string, description: "Named theme preset (e.g., dark, light)" }
+                socialLinks: { type: object }
+      responses:
+        "201":
+          description: Page created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/LinkPage" }
+        "400":
+          description: Validation error (invalid handle format, missing required fields)
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Error" }
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "409":
+          description: Page or handle already exists
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /api/pages/mine:
+    get:
+      operationId: getMyLinksPage
+      summary: Get authenticated caller's link page with all links
+      tags: [links]
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Caller's links page (page is null if not created)
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - allOf:
+                      - { $ref: "#/components/schemas/LinkPage" }
+                      - type: object
+                        properties:
+                          links:
+                            type: array
+                            items: { $ref: "#/components/schemas/Link" }
+                  - type: object
+                    properties:
+                      page: { type: "null" }
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /api/pages/auto-create:
+    post:
+      operationId: autoCreateLinksPage
+      summary: Auto-create a link page from public profile data (handle + display name)
+      tags: [links]
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      responses:
+        "201":
+          description: Page created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/LinkPage" }
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "409":
+          description: Page already exists
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /api/pages/{handle}:
+    get:
+      operationId: getLinksPage
+      summary: Get a public link page with active links
+      tags: [links]
+      parameters:
+        - name: handle
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Links page with links
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - { $ref: "#/components/schemas/LinkPage" }
+                  - type: object
+                    properties:
+                      links:
+                        type: array
+                        items: { $ref: "#/components/schemas/Link" }
+        "403":
+          description: Page is private
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+    put:
+      operationId: updateLinksPage
+      summary: Update link page (owner only)
+      tags: [links]
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - name: handle
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title: { type: string }
+                bio: { type: string }
+                avatar: { type: string }
+                avatarAssetId: { type: string }
+                theme: { type: object }
+                socialLinks: { type: object }
+                isPublic: { type: boolean }
+      responses:
+        "200":
+          description: Page updated
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/LinkPage" }
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "403":
+          description: Not the page owner
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "404":
+          description: Page not found
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+    delete:
+      operationId: deleteLinksPage
+      summary: Delete link page (owner only) — links cascade
+      tags: [links]
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - name: handle
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deleted: { type: boolean }
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "403":
+          description: Not the page owner
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "404":
+          description: Page not found
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /api/pages/{handle}/links:
+    post:
+      operationId: addLinks
+      summary: Add links to a page (owner only)
+      tags: [links]
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - name: handle
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [links]
+              properties:
+                links:
+                  type: array
+                  items:
+                    type: object
+                    required: [title, url]
+                    properties:
+                      title: { type: string }
+                      url: { type: string, format: uri }
+                      icon: { type: string }
+                      thumbnail: { type: string }
+                      position: { type: integer }
+                      isActive: { type: boolean }
+                      visibility: { type: string, enum: [public, authenticated] }
+      responses:
+        "201":
+          description: Links added
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  links:
+                    type: array
+                    items: { $ref: "#/components/schemas/Link" }
+        "400":
+          description: Validation error (missing title, invalid URL)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "403":
+          description: Not the page owner
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "404":
+          description: Page not found
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /api/pages/{handle}/stats:
+    get:
+      operationId: getPageStats
+      summary: Get page click statistics (owner only) — last 30 days
+      tags: [links]
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - name: handle
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Page stats
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  totalClicks: { type: integer }
+                  clicksByLink:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: string }
+                        title: { type: string }
+                        url: { type: string }
+                        clicks: { type: integer }
+                  clicksByDay:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        date: { type: string, format: date }
+                        clicks: { type: integer }
+                  topReferrers:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        referrer: { type: string }
+                        clicks: { type: integer }
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "403":
+          description: Not the page owner
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "404":
+          description: Page not found
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /api/links/{id}:
+    put:
+      operationId: updateLink
+      summary: Update a link (owner only)
+      tags: [links]
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title: { type: string }
+                url: { type: string, format: uri }
+                icon: { type: string }
+                thumbnail: { type: string }
+                position: { type: integer }
+                isActive: { type: boolean }
+                visibility: { type: string, enum: [public, authenticated] }
+      responses:
+        "200":
+          description: Link updated
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Link" }
+        "400":
+          description: Invalid URL
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "403":
+          description: Not the page owner
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "404":
+          description: Link not found
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+    delete:
+      operationId: deleteLink
+      summary: Delete a link (owner only)
+      tags: [links]
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deleted: { type: boolean }
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "403":
+          description: Not the page owner
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "404":
+          description: Link not found
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /api/links/{id}/click:
+    post:
+      operationId: recordClick
+      summary: Record a link click (privacy-preserving — only referrer domain and country stored)
+      tags: [links]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Click recorded (always succeeds to avoid UX disruption)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  recorded: { type: boolean }

@@ -4,7 +4,7 @@ const { bootstrapSigningIdentityMock } = vi.hoisted(() => ({
   bootstrapSigningIdentityMock: vi.fn(),
 }));
 
-vi.mock('@/lib/signing-identity', () => ({
+vi.mock('@/lib/auth/signing-identity', () => ({
   bootstrapSigningIdentity: bootstrapSigningIdentityMock,
 }));
 

@@ -1,4 +1,4 @@
-import { bootstrapSigningIdentity } from '@/lib/signing-identity';
+import { bootstrapSigningIdentity } from '@/lib/auth/signing-identity';
 
 /**
  * Next.js instrumentation hook (stable since Next 15) — runs once when the
@@ -12,6 +12,12 @@ import { bootstrapSigningIdentity } from '@/lib/signing-identity';
  * bootstrap keystore on every later boot; see #7 and docs/REGISTRATION.md).
  * Refusing to boot on a misconfigured env catches the problem immediately
  * instead of serving requests no kernel call could ever authenticate.
+ *
+ * This app deliberately has no Edge middleware (see next.config.js's
+ * `redirects()` for why) specifically so this file only ever needs a
+ * Node.js-targeted bundle — `@ima-jin/auth-client`'s signing-key boot path
+ * uses Node builtins (crypto/fs/path) that don't exist under the Edge
+ * runtime.
  */
 export function validateSigningKeyBootEnv(): void {
   if (process.env.IMAJIN_APP_PRIVATE_KEY) {

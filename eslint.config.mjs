@@ -14,6 +14,12 @@ const eslintConfig = [
   {
     ignores: ['migrations/**', '.next/**', 'node_modules/**', 'next-env.d.ts', 'coverage/**'],
   },
+  {
+    // next.config.js is loaded by Next.js itself via require() before any
+    // ESM interop is available, so it must stay CommonJS.
+    files: ['next.config.js'],
+    rules: { '@typescript-eslint/no-require-imports': 'off' },
+  },
 ];
 
 export default eslintConfig;
