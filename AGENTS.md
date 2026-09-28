@@ -1,16 +1,16 @@
 <!--
-  ┌─────────────────────────────────────────────────────────────────────┐
-  │  FORK CHECKLIST — fill this in first, then delete this comment block  │
-  │                                                                       │
-  │  APP NAME:        <e.g. AgriFortress>                                 │
-  │  APP DID:         <did:imajin:… — from app registration>             │
-  │  SCOPES:          <e.g. supply:read, supply:write>                    │
-  │  DOMAIN:          <e.g. integrity.imajin.ai>                          │
-  │  KERNEL:          <prod: https://jin.imajin.ai | dev: https://dev-jin.imajin.ai> │
-  │  REFERENCE APP:   ima-jin/imajin-scorecard                            │
-  │                                                                       │
-  │  Then: fill the "This App" section, keep everything else, delete me.  │
-  └─────────────────────────────────────────────────────────────────────┘
+  FORK CHECKLIST (completed, refs imajin-ai#1986 phase 1):
+  APP NAME: links · APP DID: did:imajin:REPLACE_ME (set at registration, #1990)
+  SCOPES: none required (this app authenticates callers via authenticate()/
+    requireSessionOrAppToken and relies on the caller's own DID + this app's
+    own ownership checks) · DOMAIN: links.imajin.ai (Caddy /links path prefix)
+  KERNEL: prod https://jin.imajin.ai | dev https://dev-jin.imajin.ai
+  REFERENCE APP: ima-jin/dykil (score-0 sibling; this app instead follows dykil's
+    explicit product decision to adopt @ima-jin/auth's requireSessionOrAppToken
+    end-to-end, mirroring coffee's #1974 reference adoption, behind a single
+    authenticate() interface — src/lib/auth/authenticate.ts). Unlike dykil,
+    this app owns a Postgres schema (the schema-owning reference app for
+    #1981 — see docs/ARCHITECTURE.md).
 -->
 
 # AGENTS.md — Third-Party App on Imajin
@@ -193,15 +193,25 @@ Full text: `ima-jin/conventions/ISSUE-CONVENTIONS.md`. This §7 is kept in sync 
 
 ---
 
-## 8. This App (fork fills this in)
+## 8. This App
 
-> Replace this whole section in the fork. Keep §1–§7 intact.
-
-- **What it is:** _<one-line purpose>_
-- **App DID:** _<did:imajin:…>_
-- **Scopes:** _<e.g. supply:read, supply:write>_
-- **Domain:** _<e.g. app.imajin.ai>_
-- **The real-world loop it instruments:** _<who → who, what changes hands, the one paid leg>_
-- **Domain events it emits (via kernel API):** _<e.g. supply.declared → supply.received>_
-- **Connectors it consumes:** _<e.g. QuickBooks (user self-authorizes)>_
-- **Scope guardrails specific to this app:** _<the "do not build X" list — keep it provable, not comprehensive>_
+- **What it is:** Curated link-in-bio pages with privacy-preserving click analytics (refs #1986,
+  phase 1 of #1981). This app owns its own Postgres schema (`links`) — the schema-owning
+  reference app for this extraction wave.
+- **App DID:** _<did:imajin:… — set at registration, docs/REGISTRATION.md>_
+- **Scopes:** none of the closed grant-capability or SCOPES vocabularies apply; this app
+  authenticates callers via a single `authenticate()` interface
+  (`src/lib/auth/authenticate.ts`, currently `requireSessionOrAppToken`) and enforces
+  ownership itself (a page/link's `did` column must match the caller's DID).
+- **Domain:** links.imajin.ai (pm2 entry `links`, port `3102`, Caddy route unchanged per #1986).
+- **The real-world loop it instruments:** a DID publishes a curated list of links (their own
+  page); a visitor clicks one. No paid leg.
+- **Domain events it emits (via kernel API):** none — this app's own schema is the record of
+  a page's links and click counts; it does not emit kernel attestations or bus events.
+- **Connectors it consumes:** none. The only kernel call beyond session validation is a
+  best-effort public profile lookup on auto-create (`src/lib/kernel/profile.ts`).
+- **Scope guardrails specific to this app:** never read or write a kernel-owned schema, even
+  for data that looks adjacent (e.g. profile handle/display name) — always go through the
+  kernel's public API. Never call `@ima-jin/auth`'s auth primitives directly from a route —
+  always go through `authenticate()`. Never resolve `avatarAssetId` against the kernel media
+  service from this app — it is stored opaque, exactly as the original app did.

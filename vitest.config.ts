@@ -16,10 +16,11 @@ export default defineConfig({
     include: ['**/__tests__/**/*.test.ts'],
     exclude: ['node_modules/**', '.next/**'],
     server: {
-      // Otherwise vitest hands @ima-jin/auth-client's ESM import of
-      // 'next/headers' straight to Node's own resolver, which bypasses
-      // resolve.alias above and can't find it outside a real Next.js runtime.
-      deps: { inline: ['@ima-jin/auth-client'] },
+      // Otherwise vitest hands these packages' ESM imports of 'next/headers'
+      // / 'next/server' straight to Node's own resolver, which (a) bypasses
+      // resolve.alias above for next/headers, and (b) can't resolve
+      // extensionless 'next/server' imports the way Next's own bundler does.
+      deps: { inline: ['@ima-jin/auth-client', '@ima-jin/auth', '@ima-jin/config', '@ima-jin/logger'] },
     },
     coverage: {
       // lcov is what SonarCloud ingests (sonar.javascript.lcov.reportPaths).
