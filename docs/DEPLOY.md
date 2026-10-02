@@ -22,7 +22,10 @@ scripts/deploy.sh prod --dry-run      # print the plan, execute nothing
 ```
 
 It is fail-fast: any failure before step 7 stops the deploy and the running process keeps serving the previous
-build.
+build. The env file is the single source of truth: contract variables exported in the calling shell are ignored
+(and listed by name), because `node --env-file` and `pm2 --update-env` would otherwise let a stray `DATABASE_URL`
+win. Note that step 2 swaps in the new ref's `deploy.sh`, so a change to the script itself takes effect from the
+*next* run.
 
 1. **preflight** — `git`, `node` (>= `.nvmrc`), `pnpm`, `pm2`, `curl` on `PATH`; no local changes to tracked files;
    `.env.local` exists; no stale `pm2` entry of the same name pointing at a different path (see
