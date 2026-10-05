@@ -16,8 +16,9 @@ const eslintConfig = [
   },
   {
     // next.config.js is loaded by Next.js itself via require() before any
-    // ESM interop is available, so it must stay CommonJS.
-    files: ['next.config.js'],
+    // ESM interop is available, so it must stay CommonJS. Likewise
+    // ecosystem.config.cjs is loaded by pm2 as CommonJS.
+    files: ['next.config.js', 'ecosystem.config.cjs'],
     rules: { '@typescript-eslint/no-require-imports': 'off' },
   },
 ];

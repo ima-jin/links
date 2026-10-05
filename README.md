@@ -41,6 +41,11 @@ the honest list.
    free dev port after `ima-jin/dykil`'s `3101`, matching the port `@imajin/config`'s own service manifest already
    reserves for `links` in the monorepo. `/links/api/health` and `/links/api/spec` respond immediately.
 
+## Deploying
+
+Prod and dev are deployed with one command, `scripts/deploy.sh <prod|dev>` — see [`docs/DEPLOY.md`](./docs/DEPLOY.md)
+(runbook, Caddy route, pm2, migration baseline) and [`docs/ENVIRONMENTS.md`](./docs/ENVIRONMENTS.md) (every env var).
+
 ## The routes
 
 | Route | What | Auth |
