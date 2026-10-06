@@ -31,7 +31,8 @@ const nextConfig = {
     // the Node.js server context) rather than as Edge middleware: this app's
     // `instrumentation.ts` needs `@ima-jin/auth-client`'s Node-only signing-key
     // boot path (crypto/fs/path), which Next.js cannot bundle for the Edge
-    // runtime an `export function middleware()` would additionally require.
+    // runtime. (`middleware.ts`, the claim-state gate from #2427, opts into the
+    // Node.js middleware runtime instead.)
     // Query parameters are preserved automatically; the `missing` clause
     // excludes the hub's own embedded iframe load (`?embed=hub&did=...`).
     return [

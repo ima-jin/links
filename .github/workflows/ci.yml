@@ -204,3 +204,4 @@ jobs:
           name: sonar-payload
           path: /tmp/sonar-payload
           retention-days: 1
+          include-hidden-files: true

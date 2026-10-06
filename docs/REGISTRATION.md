@@ -70,7 +70,7 @@ cp .env.example .env.local
 #   APP_DB_SCHEMA=<a name for this app's own Postgres schema — see docs/MIGRATIONS.md>
 #   DATABASE_URL=<this app's own Postgres connection string>
 #   IMAJIN_KERNEL_URL=<same host as IMAJIN_AUTH_URL above>
-#   IMAJIN_APP_CLAIM_CODE=<one-time code from the kernel operator's /jin approval card — first boot only>
+#   IMAJIN_APP_CLAIM_CODE=<optional — leave unset and claim via <app>/claim in the browser instead>
 ```
 
 Without `IMAJIN_APP_DID` set, or with a raw `IMAJIN_APP_PRIVATE_KEY` still set, `pnpm dev` /
@@ -82,15 +82,37 @@ could ever authenticate.
 This app never reads a raw private key out of `.env`. Instead, `instrumentation.ts` calls
 `@ima-jin/auth-client`'s `loadAppSigningKey()` once, before serving any request:
 
-- **First boot** (no local keystore yet): spends the one-time `IMAJIN_APP_CLAIM_CODE` from the
-  kernel operator's `/jin` approval card, together with a freshly minted Ed25519 "bootstrap"
-  keypair, to fetch the real signing key. The bootstrap keypair — never the signing key — is then
-  persisted in a local keystore file (`IMAJIN_APP_KEYSTORE`, default `./.imajin/keystore.json`,
-  mode `0600`). Delete `IMAJIN_APP_CLAIM_CODE` from `.env.local` once this succeeds; it's spent.
+- **First boot** (no local keystore yet): the operator opens `<this app's URL>/claim` (`/links/claim`)
+  and pastes the one-time claim code from the kernel operator's `/jin` approval card. This app's
+  own `app/api/claim/route.ts` spends it, together with a freshly minted Ed25519 "bootstrap"
+  keypair, to fetch the real signing key, and hot-swaps the in-memory identity — no ssh, no env
+  file edit, no restart. The bootstrap keypair — never the signing key — is persisted in a local
+  keystore file (`IMAJIN_APP_KEYSTORE`, default `./.imajin/keystore.json`, mode `0600`), and
+  `/claim` 404s from then on. **Fallback (advanced/CI):** set `IMAJIN_APP_CLAIM_CODE` in
+  `.env.local` and boot — the same exchange runs at boot instead; delete the variable once it
+  succeeds, it's spent.
 - **Every later boot**: signs a fresh challenge with the persisted bootstrap key and fetches the
   signing key again — no claim code needed, no operator action required for an ordinary restart.
-- **No keystore and no claim code**: `loadAppSigningKey()` throws immediately with a clear error
-  instead of booting unsigned.
+- **No keystore and no claim code**: the app boots in **unclaimed mode** (imajin-ai#2427) instead of
+  crashing. Every route except `/claim`, `/api/claim`, and `/api/health` serves a minimal "not
+  claimed yet" page, and `/api/health` reports `{ claimed: false }`. A claim code that IS provided
+  but refused by the kernel (or any network error) still throws at boot — never unsigned.
+
+### Proxy trust assumption (rate limiting on `/claim`)
+
+`POST /api/claim` is rate limited per client address, and the only address it trusts is the
+**last** hop of `X-Forwarded-For` — the one appended by this app's own front door. That is only
+sound if both of these hold:
+
+- **The front door must set `X-Forwarded-For`.** Caddy's `reverse_proxy` does this by default
+  (with no `trusted_proxies` configured, it discards any client-supplied value and appends the
+  real peer address). Any other proxy must be configured to do the same. `x-real-ip` is never
+  consulted — a proxy does not overwrite it, so it is fully client-controlled.
+- **The app port must not be directly reachable.** Bind it to localhost or a private network
+  and firewall it, so every request arrives through the front door. A client that can reach the
+  port directly can send any `X-Forwarded-For` it likes and sidestep the per-address limit.
+
+Without a usable `X-Forwarded-For`, all callers share one coarse fallback bucket.
 
 If the local keystore is ever lost (disk wipe, redeploy to a fresh host), ask the kernel operator
 to re-approve `apps.provision` with `reissueClaim: true` for a fresh claim code — redeeming it also

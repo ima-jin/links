@@ -58,7 +58,7 @@ Set once, then delete.
 
 | Variable | When | Dev | Prod | What it does |
 |---|---|---|---|---|
-| `IMAJIN_APP_CLAIM_CODE` **(secret)** | runtime | (only on first boot) | (only on first boot) | One-time code from the kernel operator's /jin approval card. Needed only on the very first boot (no keystore yet) or a lost-keystore rebind; delete it after the first successful boot. |
+| `IMAJIN_APP_CLAIM_CODE` **(secret)** | runtime | optional | optional | Optional fallback (advanced/CI). The normal path is pasting the one-time code from the kernel operator's /jin approval card on `<app>/claim` (imajin-ai#2427) — no env var needed. If set, it is spent on first boot (no keystore yet) or a lost-keystore rebind; delete it afterwards. |
 
 ## Optional
 

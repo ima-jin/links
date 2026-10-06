@@ -58,11 +58,12 @@ Use `~/dev/links` and `.env.dev.example` / `scripts/deploy.sh dev` for dev. Depl
 
 ### Operator steps this repo cannot do
 
-- **Mint the app identity** (separate card; [REGISTRATION.md](./REGISTRATION.md)): set `IMAJIN_APP_DID` and, for the
-  first boot only, `IMAJIN_APP_CLAIM_CODE` in `.env.local`. `check-env.mjs` fails while `IMAJIN_APP_DID` is still the
-  `REPLACE_ME` placeholder. The claim code is single-use: the first successful boot writes the keystore
-  (`IMAJIN_APP_KEYSTORE`, mode 0600); **delete the claim code from `.env.local` afterwards**. Do not lose the
-  keystore — a lost keystore needs a `reissueClaim` rebind.
+- **Mint the app identity** (separate card; [REGISTRATION.md](./REGISTRATION.md)): set `IMAJIN_APP_DID` in
+  `.env.local`, start the app, then **paste the claim code on `<app>/claim`** (`/links/claim`) — no ssh, no env
+  file edit, no restart. `check-env.mjs` fails while `IMAJIN_APP_DID` is still the `REPLACE_ME` placeholder. The claim
+  code is single-use: a successful claim writes the keystore (`IMAJIN_APP_KEYSTORE`, mode 0600) and `/links/claim`
+  404s from then on. Do not lose the keystore — a lost keystore needs a `reissueClaim` rebind. Fallback (advanced/CI):
+  set `IMAJIN_APP_CLAIM_CODE` in `.env.local` before first boot instead, and **delete it afterwards**.
 - **Create the databases/roles** and put the connection strings in each `.env.local`. Prod/dev already contain the
   `links` schema; the baseline adopts it in place.
 - **Caddy** — the route already exists; verify it against the [snippet below](#caddy).
@@ -157,7 +158,9 @@ rollback is only safe while migrations stay additive (the same stance as imajin-
 - **`baseline` exits 1** — the message lists exactly what differs. Do not edit the script to force it; fix the schema
   (or tell the app owner the schema drifted), then re-run.
 - **`env check` fails** — each line names a variable; see [ENVIRONMENTS.md](./ENVIRONMENTS.md).
-- **Health never goes green on a first boot** — `pm2 logs <name>`: a missing/used claim code or wrong
+- **Health reports `claimed:false`** — the app is booted but unclaimed: open `<app>/claim` and paste the claim code
+  (`/api/health` reports `claimed:true` once it is, including after every restart).
+- **Health never goes green on a first boot** — `pm2 logs <name>`: a used/rejected `IMAJIN_APP_CLAIM_CODE` or wrong
   `IMAJIN_APP_DID` fails at `instrumentation.ts`. The dev and prod instances must each have their own DID, claim
   code and keystore.
 - **Login loops on dev only** — `IMAJIN_ENV=dev` is missing (wrong session cookie name).
