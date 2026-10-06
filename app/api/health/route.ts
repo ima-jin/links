@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { sql } from 'drizzle-orm';
 import { createLogger } from '@ima-jin/logger';
+import { isAppClaimed } from '@/lib/auth/signing-identity';
 
 const log = createLogger('links');
 
@@ -29,6 +30,9 @@ export async function GET() {
       status: dbOk ? 'ok' : 'degraded',
       service: 'links',
       timestamp: new Date().toISOString(),
+      // Unclaimed boot mode (imajin-ai#2427): false until an operator pastes a
+      // claim code at /claim (or IMAJIN_APP_CLAIM_CODE resolves it at boot).
+      claimed: isAppClaimed(),
     },
     { status: dbOk ? 200 : 503 },
   );

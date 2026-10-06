@@ -9,6 +9,9 @@ export default defineConfig({
       // cookie read) — not resolvable under plain-Node vitest, only inside a
       // real Next.js runtime. See test/stubs/next-headers.ts.
       'next/headers': fileURLToPath(new URL('./test/stubs/next-headers.ts', import.meta.url)),
+      // Next's real `next/server` pulls in a CJS-only dependency that breaks
+      // under vitest's SSR module loading; see src/test/next-server-shim.ts.
+      'next/server': fileURLToPath(new URL('./src/test/next-server-shim.ts', import.meta.url)),
     },
   },
   test: {

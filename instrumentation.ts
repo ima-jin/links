@@ -13,11 +13,15 @@ import { bootstrapSigningIdentity } from '@/lib/auth/signing-identity';
  * Refusing to boot on a misconfigured env catches the problem immediately
  * instead of serving requests no kernel call could ever authenticate.
  *
- * This app deliberately has no Edge middleware (see next.config.js's
- * `redirects()` for why) specifically so this file only ever needs a
- * Node.js-targeted bundle — `@ima-jin/auth-client`'s signing-key boot path
- * uses Node builtins (crypto/fs/path) that don't exist under the Edge
- * runtime.
+ * This app's `middleware.ts` (claim-state gate, #2427) runs on the Node.js
+ * middleware runtime, never Edge (see next.config.js's `redirects()` for why
+ * the `/dashboard` redirect isn't middleware) — `@ima-jin/auth-client`'s
+ * signing-key boot path uses Node builtins (crypto/fs/path) that don't exist
+ * under the Edge runtime.
+ *
+ * With neither a keystore nor `IMAJIN_APP_CLAIM_CODE`, `bootstrapSigningIdentity()`
+ * returns without throwing (unclaimed boot mode, #2427) and an operator claims
+ * this app at `<app>/claim`.
  */
 export function validateSigningKeyBootEnv(): void {
   if (process.env.IMAJIN_APP_PRIVATE_KEY) {

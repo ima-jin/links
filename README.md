@@ -24,9 +24,10 @@ the honest list.
 1. **Register this app with the kernel** — see [`docs/REGISTRATION.md`](./docs/REGISTRATION.md). You'll get back
    this app's `appDid` and registry id.
 2. **Set env**: `cp .env.example .env.local`, then fill in `IMAJIN_APP_DID`, `NEXT_PUBLIC_IMAJIN_APP_ID`,
-   `DATABASE_URL`, `APP_DB_SCHEMA` (`links`), `AUTH_SERVICE_URL`, `IMAJIN_KERNEL_URL`, and (first boot only)
-   `IMAJIN_APP_CLAIM_CODE`. This app refuses to start without a signing key it can fetch via `loadAppSigningKey()`
-   (see `instrumentation.ts`) — never a raw `IMAJIN_APP_PRIVATE_KEY` in the env file.
+   `DATABASE_URL`, `APP_DB_SCHEMA` (`links`), `AUTH_SERVICE_URL`, and `IMAJIN_KERNEL_URL`. This app refuses
+   to start on a raw `IMAJIN_APP_PRIVATE_KEY` still being set. **Skip `IMAJIN_APP_CLAIM_CODE` for now** — without a
+   keystore or claim code, this app boots in "unclaimed" mode (imajin-ai#2427): approve on `/jin` → open
+   `<this app>/claim` (`/links/claim`) → paste the code → done.
 3. **Migrate this app's own database** (its own Postgres schema only — see
    [`docs/MIGRATIONS.md`](./docs/MIGRATIONS.md)):
    ```bash
