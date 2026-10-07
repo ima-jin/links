@@ -11,7 +11,7 @@ const originalEnv: Record<string, string | undefined> = {};
 const RATE_LIMIT = 5;
 
 function postRequest(body: unknown, headers: Record<string, string> = {}): Request {
-  return new Request('https://links.example.test/api/claim', {
+  return new Request('https://links.imajin.ai/api/claim', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...headers },
     body: JSON.stringify(body),

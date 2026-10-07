@@ -18,7 +18,7 @@ vi.mock('@/db', () => ({
 }));
 
 function postRequest(body: unknown) {
-  return new NextRequest('https://links.example.test/api/pages', {
+  return new NextRequest('https://links.imajin.ai/api/pages', {
     method: 'POST',
     body: JSON.stringify(body),
   });

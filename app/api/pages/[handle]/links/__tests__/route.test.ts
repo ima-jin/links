@@ -23,7 +23,7 @@ vi.mock('@/db', () => ({
 const params = Promise.resolve({ handle: 'jin' });
 
 function postRequest(body: unknown) {
-  return new NextRequest('https://links.example.test/api/pages/jin/links', { method: 'POST', body: JSON.stringify(body) });
+  return new NextRequest('https://links.imajin.ai/api/pages/jin/links', { method: 'POST', body: JSON.stringify(body) });
 }
 
 describe('POST /api/pages/:handle/links', () => {

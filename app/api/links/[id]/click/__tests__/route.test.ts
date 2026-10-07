@@ -17,7 +17,7 @@ vi.mock('@/db', () => ({
 const params = Promise.resolve({ id: 'link_1' });
 
 function postRequest(headers: Record<string, string> = {}) {
-  return new NextRequest('https://links.example.test/api/links/link_1/click', { method: 'POST', headers });
+  return new NextRequest('https://links.imajin.ai/api/links/link_1/click', { method: 'POST', headers });
 }
 
 describe('POST /api/links/:id/click', () => {

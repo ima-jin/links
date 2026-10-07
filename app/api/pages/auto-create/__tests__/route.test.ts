@@ -19,7 +19,7 @@ vi.mock('@/db', () => ({
 }));
 
 function postRequest() {
-  return new NextRequest('https://links.example.test/api/pages/auto-create', { method: 'POST' });
+  return new NextRequest('https://links.imajin.ai/api/pages/auto-create', { method: 'POST' });
 }
 
 describe('POST /api/pages/auto-create', () => {

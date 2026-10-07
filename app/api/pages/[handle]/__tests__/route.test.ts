@@ -34,7 +34,7 @@ describe('GET /api/pages/:handle', () => {
     findFirstMock.mockResolvedValue(null);
     const { GET } = await import('../route');
 
-    const response = await GET(new NextRequest('https://links.example.test/api/pages/jin'), { params });
+    const response = await GET(new NextRequest('https://links.imajin.ai/api/pages/jin'), { params });
 
     expect(response.status).toBe(404);
   });
@@ -43,7 +43,7 @@ describe('GET /api/pages/:handle', () => {
     findFirstMock.mockResolvedValue({ id: 'page_1', isPublic: false });
     const { GET } = await import('../route');
 
-    const response = await GET(new NextRequest('https://links.example.test/api/pages/jin'), { params });
+    const response = await GET(new NextRequest('https://links.imajin.ai/api/pages/jin'), { params });
 
     expect(response.status).toBe(403);
   });
@@ -53,7 +53,7 @@ describe('GET /api/pages/:handle', () => {
     selectMock.mockReturnValue(chainable([{ id: 'link_1' }]));
     const { GET } = await import('../route');
 
-    const response = await GET(new NextRequest('https://links.example.test/api/pages/jin'), { params });
+    const response = await GET(new NextRequest('https://links.imajin.ai/api/pages/jin'), { params });
     const body = await response.json();
 
     expect(response.status).toBe(200);
@@ -69,7 +69,7 @@ describe('PUT /api/pages/:handle', () => {
   });
 
   function putRequest(body: unknown) {
-    return new NextRequest('https://links.example.test/api/pages/jin', { method: 'PUT', body: JSON.stringify(body) });
+    return new NextRequest('https://links.imajin.ai/api/pages/jin', { method: 'PUT', body: JSON.stringify(body) });
   }
 
   it('returns 401 when not authenticated', async () => {
@@ -123,7 +123,7 @@ describe('DELETE /api/pages/:handle', () => {
   });
 
   function deleteRequest() {
-    return new NextRequest('https://links.example.test/api/pages/jin', { method: 'DELETE' });
+    return new NextRequest('https://links.imajin.ai/api/pages/jin', { method: 'DELETE' });
   }
 
   it('returns 403 when the caller is not the owner', async () => {
