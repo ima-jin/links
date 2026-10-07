@@ -51,6 +51,8 @@ Missing any of these and `scripts/check-env.mjs` fails the deploy before anythin
 | `NEXT_PUBLIC_BASE_PATH` | build | `/links` | `/links` | Reverse-proxy path prefix the app is mounted under. Must be `/links`. Baked at build time; rebuild after changing. |
 | `NEXT_PUBLIC_APP_URL` | build | `https://dev-jin.imajin.ai/links` | `https://jin.imajin.ai/links` | This app's public URL including the `/links` base path. Public pages are served at `${NEXT_PUBLIC_APP_URL}/{handle}` (shown and linked on the edit and dashboard pages; there is no fallback host, so unset/invalid fails). Baked into the client bundle at build time; rebuild after changing. Not the token audience — path-routed apps share one host (imajin-ai#2706); the audience is this app's registry slug (see `IMAJIN_APP_AUD`). |
 | `IMAJIN_APP_AUD` | runtime (optional) | unset | unset | Override for the `aud` scoped app tokens are verified against. Defaults to this app's registry slug (`links`), which `apps.provision` writes into tokenAudiences — no post-provision edit. Never a host. |
+| `REGISTRY_SERVICE_URL` | runtime | (unset) | (unset) | @ima-jin/config registry service URL resolution. Not used by links; leave unset. |
+| `REGISTRY_URL` | runtime | (unset) | (unset) | Deprecated alias of REGISTRY_SERVICE_URL read by @ima-jin/config. Not used by links; leave unset. |
 | `IMAJIN_APP_DID` | runtime | `did:imajin:<dev app DID>` | `did:imajin:<prod app DID>` | This app's own did:imajin:… from registration (docs/REGISTRATION.md). instrumentation.ts refuses to boot without it. Not a secret. |
 
 ## First boot only
