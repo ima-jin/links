@@ -1,23 +1,19 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, expect, it, vi } from 'vitest';
 import { thisAppHost } from '../env';
 
-describe('thisAppHost', () => {
-  afterEach(() => {
-    vi.unstubAllEnvs();
-  });
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
 
-  it('returns the host of NEXT_PUBLIC_APP_URL', () => {
-    vi.stubEnv('NEXT_PUBLIC_APP_URL', 'https://dev.example.test/links');
-    expect(thisAppHost()).toBe('dev.example.test');
-  });
+it('thisAppHost returns the host of NEXT_PUBLIC_APP_URL', () => {
+  vi.stubEnv('NEXT_PUBLIC_APP_URL', 'https://dev.example.test/links');
+  expect(thisAppHost()).toBe('dev.example.test');
+});
 
-  it('throws instead of falling back when NEXT_PUBLIC_APP_URL is unset', () => {
-    vi.stubEnv('NEXT_PUBLIC_APP_URL', '');
-    expect(() => thisAppHost()).toThrow(/NEXT_PUBLIC_APP_URL is not set/);
-  });
-
-  it('throws instead of falling back when NEXT_PUBLIC_APP_URL is invalid', () => {
-    vi.stubEnv('NEXT_PUBLIC_APP_URL', 'not a url');
-    expect(() => thisAppHost()).toThrow(/not a valid URL/);
-  });
+it.each([
+  ['unset', '', /is not set/],
+  ['invalid', 'not a url', /not a valid URL/],
+])('thisAppHost throws instead of falling back when NEXT_PUBLIC_APP_URL is %s', (_name, appUrl, message) => {
+  vi.stubEnv('NEXT_PUBLIC_APP_URL', appUrl);
+  expect(() => thisAppHost()).toThrow(message);
 });

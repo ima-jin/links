@@ -164,14 +164,11 @@ describe('validateEnv', () => {
   });
 
   it('fails check-env when NEXT_PUBLIC_APP_URL is missing, invalid or lacks the /links base path', () => {
-    const withoutAppUrl: Record<string, string | undefined> = { ...validProd() };
-    delete withoutAppUrl.NEXT_PUBLIC_APP_URL;
-    expect(validateEnv(withoutAppUrl, 'prod').errors).toContain('NEXT_PUBLIC_APP_URL is required but not set.');
-    expect(validateEnv({ ...validProd(), NEXT_PUBLIC_APP_URL: 'not a url' }, 'prod').errors.join('\n')).toMatch(/NEXT_PUBLIC_APP_URL is not a valid http/);
-    expect(validateEnv({ ...validProd(), NEXT_PUBLIC_APP_URL: 'https://jin.imajin.ai' }, 'prod').errors.join('\n')).toMatch(
-      /NEXT_PUBLIC_APP_URL must end with the \/links base path/,
-    );
-    expect(validateEnv({ ...validProd(), NEXT_PUBLIC_APP_URL: 'https://jin.imajin.ai/links/' }, 'prod').errors).toEqual([]);
+    const appUrlErrors = (value: string) => validateEnv({ ...validProd(), NEXT_PUBLIC_APP_URL: value }, 'prod').errors.join('\n');
+    expect(appUrlErrors('')).toMatch(/NEXT_PUBLIC_APP_URL is required but not set/);
+    expect(appUrlErrors('not a url')).toMatch(/NEXT_PUBLIC_APP_URL is not a valid http/);
+    expect(appUrlErrors('https://jin.imajin.ai')).toMatch(/NEXT_PUBLIC_APP_URL must end with the \/links base path/);
+    expect(appUrlErrors('https://jin.imajin.ai/links/')).toBe('');
   });
 
   it('rejects a wrong schema, base path, database URL and DID', () => {

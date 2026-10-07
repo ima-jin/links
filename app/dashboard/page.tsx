@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { buildPublicUrl, apiFetch } from '@ima-jin/config';
 import { useToast } from '@/components/Toast';
+import { PublicPageLink } from '@/components/PublicPageLink';
 import { publicPageUrl } from '@/lib/public-url';
 
 interface LinkStats {
@@ -106,9 +107,7 @@ export default function DashboardPage() {
           <div>
             <h1 className="text-3xl font-bold mb-2">My Links Page</h1>
             <p className="text-gray-600 dark:text-gray-400">
-              <a href={publicUrl} target="_blank" rel="noreferrer" className="text-orange-500 hover:underline">
-                {publicUrl}
-              </a>
+              <PublicPageLink handle={handle} />
             </p>
           </div>
           <div className="flex gap-3">

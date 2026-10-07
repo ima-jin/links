@@ -4,7 +4,7 @@ import NextLink from 'next/link';
 import { useEffect, useState } from 'react';
 import { buildPublicUrl, apiFetch } from '@ima-jin/config';
 import { useToast } from '@/components/Toast';
-import { publicPageUrl } from '@/lib/public-url';
+import { PublicPageLink } from '@/components/PublicPageLink';
 
 interface LinkItem {
   id: string;
@@ -304,8 +304,6 @@ export default function EditPage() {
     );
   }
 
-  const publicUrl = publicPageUrl(page.handle);
-
   return (
     <div className="min-h-screen py-12 px-4 bg-gray-50 dark:bg-gray-900">
       <div className="max-w-3xl mx-auto">
@@ -313,9 +311,7 @@ export default function EditPage() {
           <div>
             <h1 className="text-3xl font-bold">My Links</h1>
             <p className="text-gray-600 dark:text-gray-400 mt-1">
-              <a href={publicUrl} target="_blank" rel="noreferrer" className="text-orange-500 hover:underline">
-                {publicUrl}
-              </a>
+              <PublicPageLink handle={page.handle} />
             </p>
           </div>
           <div className="flex gap-3">

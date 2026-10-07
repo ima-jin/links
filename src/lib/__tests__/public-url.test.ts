@@ -6,48 +6,24 @@ describe('publicPageUrl', () => {
     vi.unstubAllEnvs();
   });
 
-  it('keeps the /links base path: dev', () => {
-    vi.stubEnv('NEXT_PUBLIC_APP_URL', 'https://dev.example.test/links');
-    expect(publicPageUrl('veteze')).toBe('https://dev.example.test/links/veteze');
+  it.each([
+    ['dev base path', 'https://dev.example.test/links', 'veteze', 'https://dev.example.test/links/veteze'],
+    ['prod base path', 'https://prod.example.test/links', 'jin', 'https://prod.example.test/links/jin'],
+    ['trailing slash', 'https://dev.example.test/links/', 'veteze', 'https://dev.example.test/links/veteze'],
+    ['root-mounted base', 'http://localhost:3102', 'veteze', 'http://localhost:3102/veteze'],
+    ['query and hash on the base', 'https://dev.example.test/links?x=1#frag', 'veteze', 'https://dev.example.test/links/veteze'],
+    ['handle needing encoding', 'https://dev.example.test/links', 'a/b c', 'https://dev.example.test/links/a%2Fb%20c'],
+  ])('%s', (_name, appUrl, handle, expected) => {
+    vi.stubEnv('NEXT_PUBLIC_APP_URL', appUrl);
+    expect(publicPageUrl(handle)).toBe(expected);
   });
 
-  it('keeps the /links base path: prod', () => {
-    vi.stubEnv('NEXT_PUBLIC_APP_URL', 'https://prod.example.test/links');
-    expect(publicPageUrl('jin')).toBe('https://prod.example.test/links/jin');
-  });
-
-  it('does not double the slash when the base has a trailing slash', () => {
-    vi.stubEnv('NEXT_PUBLIC_APP_URL', 'https://dev.example.test/links/');
-    expect(publicPageUrl('veteze')).toBe('https://dev.example.test/links/veteze');
-  });
-
-  it('works for a root-mounted base (no path)', () => {
-    vi.stubEnv('NEXT_PUBLIC_APP_URL', 'http://localhost:3102');
-    expect(publicPageUrl('veteze')).toBe('http://localhost:3102/veteze');
-  });
-
-  it('drops any query or hash on the configured base', () => {
-    vi.stubEnv('NEXT_PUBLIC_APP_URL', 'https://dev.example.test/links?x=1#frag');
-    expect(publicPageUrl('veteze')).toBe('https://dev.example.test/links/veteze');
-  });
-
-  it('encodes the handle as a single path segment', () => {
-    vi.stubEnv('NEXT_PUBLIC_APP_URL', 'https://dev.example.test/links');
-    expect(publicPageUrl('a/b c')).toBe('https://dev.example.test/links/a%2Fb%20c');
-  });
-
-  it('throws when NEXT_PUBLIC_APP_URL is unset or empty — no fallback host', () => {
-    vi.stubEnv('NEXT_PUBLIC_APP_URL', '');
-    expect(() => publicPageUrl('veteze')).toThrow(/NEXT_PUBLIC_APP_URL is not set/);
-  });
-
-  it('throws when NEXT_PUBLIC_APP_URL is not a URL', () => {
-    vi.stubEnv('NEXT_PUBLIC_APP_URL', 'not a url');
-    expect(() => publicPageUrl('veteze')).toThrow(/not a valid URL/);
-  });
-
-  it('throws when NEXT_PUBLIC_APP_URL is not http(s)', () => {
-    vi.stubEnv('NEXT_PUBLIC_APP_URL', 'ftp://dev.example.test/links');
-    expect(() => publicPageUrl('veteze')).toThrow(/http\(s\)/);
+  it.each([
+    ['unset or empty (no fallback host)', '', /is not set/],
+    ['not a URL', 'not a url', /not a valid URL/],
+    ['not http(s)', 'ftp://dev.example.test/links', /http\(s\)/],
+  ])('throws when NEXT_PUBLIC_APP_URL is %s', (_name, appUrl, message) => {
+    vi.stubEnv('NEXT_PUBLIC_APP_URL', appUrl);
+    expect(() => publicPageUrl('veteze')).toThrow(message);
   });
 });
