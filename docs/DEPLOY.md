@@ -130,7 +130,8 @@ there is no down-migration. New migrations must be additive/guarded (`IF NOT EXI
 
 `ecosystem.config.cjs` defines `prod-links` (7102) and `dev-links` (3102). Each entry execs
 `node_modules/next/dist/bin/next start -p <port>` directly (never `npm start` — imajin-ai#2447: pm2 would track the
-npm wrapper and orphan `next-server` on restart), loads `.env.local` with `node --env-file` (Node exits if the
+npm wrapper and orphan `next-server` on restart), sets an explicit `kill_timeout` (15 s, matching the
+kernel-repo apps), loads `.env.local` with `node --env-file` (Node exits if the
 file is missing, so a links with no env crashes loudly instead of booting without its identity), uses this
 checkout as `cwd`, and logs to `~/.pm2/logs/<name>-out.log` / `<name>-error.log`. A checkout only ever starts its
 own entry (`--only`).

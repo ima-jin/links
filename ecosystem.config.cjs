@@ -44,6 +44,10 @@ function linksApp(name, port) {
     time: true,
     max_restarts: 10,
     min_uptime: '20s',
+    // Explicit kill_timeout (imajin-ai#2547/#2573): same 15s the kernel-repo
+    // apps use (imajin-ai deploy/ecosystem.*.config.js), so pm2 waits for a
+    // clean Next shutdown before SIGKILL.
+    kill_timeout: 15000,
   };
 }
 

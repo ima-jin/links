@@ -18,6 +18,7 @@ type App = {
   node_args: string;
   exec_mode: string;
   env: Record<string, string | number>;
+  kill_timeout: number;
   out_file: string;
   error_file: string;
 };
@@ -46,6 +47,12 @@ describe('ecosystem.config.cjs', () => {
       expect(app.exec_mode).toBe('fork');
       expect(JSON.stringify(app)).not.toMatch(/"npm"|npm start/);
       accessSync(join(app.cwd, app.script), constants.R_OK);
+    }
+  });
+
+  it('sets an explicit kill_timeout long enough for a clean Next shutdown (imajin-ai#2547, #2573)', () => {
+    for (const app of apps) {
+      expect(app.kill_timeout).toBeGreaterThanOrEqual(10_000);
     }
   });
 
