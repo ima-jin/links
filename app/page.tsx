@@ -55,7 +55,7 @@ export default function Home() {
               ) : (
                 <a
                   href={`${authUrl}/login?next=${encodeURIComponent(
-                    globalThis.window === undefined ? '/edit' : `${globalThis.location.origin}/edit`,
+                    typeof window === 'undefined' ? '/edit' : `${globalThis.location.origin}/edit`,
                   )}`}
                   className="inline-block px-8 py-4 bg-orange-500 text-white rounded-xl font-semibold text-lg hover:bg-orange-600 transition hover:shadow-lg"
                 >

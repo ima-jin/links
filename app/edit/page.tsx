@@ -88,7 +88,7 @@ export default function EditPage() {
   const [linkFormData, setLinkFormData] = useState(EMPTY_LINK_FORM);
 
   useEffect(() => {
-    fetchPage();
+    void fetchPage();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -293,7 +293,7 @@ export default function EditPage() {
             onClick={() => {
               setAutoCreateError(false);
               setLoading(true);
-              fetchPage();
+              void fetchPage();
             }}
             className="px-6 py-3 bg-orange-500 text-white rounded-lg font-semibold hover:bg-orange-600 transition"
           >
@@ -385,7 +385,7 @@ export default function EditPage() {
           </button>
         </div>
 
-        {(showLinkForm || editingLink) && (
+        {(showLinkForm || editingLink !== null) && (
           <div className="mb-6 p-6 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
             <h3 className="text-lg font-semibold mb-4">{editingLink ? 'Edit Link' : 'Add New Link'}</h3>
             <form onSubmit={(e) => {

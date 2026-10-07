@@ -77,6 +77,20 @@ function checkKernelUrl(name, value, target, errors) {
 }
 
 /**
+ * NEXT_PUBLIC_APP_URL is where public pages live (`${NEXT_PUBLIC_APP_URL}/{handle}`),
+ * so beyond being a valid deploy-target URL it must carry the base path. Unset is
+ * already reported by the `required` check.
+ */
+function checkAppUrl(value, target, errors) {
+  if (value === '') return;
+  checkKernelUrl('NEXT_PUBLIC_APP_URL', value, target, errors);
+  const path = parseUrl(value)?.pathname.replace(/\/$/, '');
+  if (path !== undefined && path !== BASE_PATH) {
+    errors.push(`NEXT_PUBLIC_APP_URL must end with the ${BASE_PATH} base path — public pages are served at \${NEXT_PUBLIC_APP_URL}/{handle}.`);
+  }
+}
+
+/**
  * Pure validation of a parsed env file for a deploy target. Returns
  * `{ errors, warnings }`; messages name variables, never values.
  * @param {Record<string, string | undefined>} env
@@ -130,14 +144,7 @@ export function validateEnv(env, target) {
     }
   }
 
-  const appUrl = get('NEXT_PUBLIC_APP_URL');
-  if (appUrl !== '') {
-    checkKernelUrl('NEXT_PUBLIC_APP_URL', appUrl, target, errors);
-    const appPath = parseUrl(appUrl)?.pathname.replace(/\/+$/, '');
-    if (appPath !== undefined && appPath !== BASE_PATH) {
-      errors.push(`NEXT_PUBLIC_APP_URL must end with the ${BASE_PATH} base path — public pages are served at \${NEXT_PUBLIC_APP_URL}/{handle}.`);
-    }
-  }
+  checkAppUrl(get('NEXT_PUBLIC_APP_URL'), target, errors);
 
   if (get('IMAJIN_APP_DID') !== '' && !get('IMAJIN_APP_DID').startsWith('did:imajin:')) {
     errors.push('IMAJIN_APP_DID must start with did:imajin:.');

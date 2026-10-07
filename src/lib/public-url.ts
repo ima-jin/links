@@ -32,6 +32,8 @@ function appBaseUrl(): URL {
 /** Absolute public URL for a page handle, e.g. https://dev-jin.imajin.ai/links/veteze. */
 export function publicPageUrl(handle: string): string {
   const base = appBaseUrl();
-  const basePath = base.pathname.replace(/\/+$/, '');
+  let end = base.pathname.length;
+  while (end > 0 && base.pathname[end - 1] === '/') end -= 1;
+  const basePath = base.pathname.slice(0, end);
   return `${base.origin}${basePath}/${encodeURIComponent(handle)}`;
 }

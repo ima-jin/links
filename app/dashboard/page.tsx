@@ -67,7 +67,7 @@ export default function DashboardPage() {
       }
     };
 
-    fetchStats();
+    void fetchStats();
   }, [router, toast]);
 
   if (loading) {
@@ -114,7 +114,7 @@ export default function DashboardPage() {
             <button
               type="button"
               onClick={() => {
-                navigator.clipboard.writeText(publicUrl);
+                void navigator.clipboard.writeText(publicUrl);
                 toast.success('Link copied!');
               }}
               className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-700 transition"
