@@ -64,24 +64,35 @@ Use `~/dev/links` and `.env.dev.example` / `scripts/deploy.sh dev` for dev. Depl
   code is single-use: a successful claim writes the keystore (`IMAJIN_APP_KEYSTORE`, mode 0600) and `/links/claim`
   404s from then on. Do not lose the keystore — a lost keystore needs a `reissueClaim` rebind. Fallback (advanced/CI):
   set `IMAJIN_APP_CLAIM_CODE` in `.env.local` before first boot instead, and **delete it afterwards**.
-- **Provide the vault bootstrap identity and grant it the attestation key** (refs imajin-ai#2455, #2468). links reads
-  the shared `ATTESTATION_INTERNAL_API_KEY` from the vault at boot (`bootstrapInternalApiKey('links')` in
-  `instrumentation.ts`) — it is never set by hand. Per environment, in this order:
-  1. The kernel operator issues links a vault bootstrap identity (a registered `did:imajin:…` plus its private key)
-     and you put the pair in that environment's `.env.local` as `LINKS_VAULT_BOOTSTRAP_DID` /
-     `LINKS_VAULT_BOOTSTRAP_PRIVATE_KEY` (separate pair for dev and prod; keep the file mode 0600).
-  2. Grant that DID the attestation key. This runs against the **live vault**, from a checkout of
-     [ima-jin/imajin-ai](https://github.com/ima-jin/imajin-ai), with the target kernel's own `DATABASE_URL`,
-     `AUTH_PRIVATE_KEY` and (if set) `VAULT_PATH` — the grant must land in the same vault file that kernel reads:
+- **Provide the vault bootstrap identity and grant it the attestation key** (refs imajin-ai#2455, #2468, #2712). links
+  reads the shared `ATTESTATION_INTERNAL_API_KEY` from the vault at boot (`bootstrapInternalApiKey('links')` in
+  `instrumentation.ts`) — it is never set by hand. One command, per environment, in this order:
+  1. Create that environment's `.env.local` from `.env.<dev|prod>.example` (mode 0600) and leave
+     `LINKS_VAULT_BOOTSTRAP_DID` / `LINKS_VAULT_BOOTSTRAP_PRIVATE_KEY` unset or empty. Do **not** hand-mint a keypair
+     and do **not** symlink this checkout into the kernel repo.
+  2. From the **kernel checkout** on the same host ([ima-jin/imajin-ai](https://github.com/ima-jin/imajin-ai),
+     `scripts/provision-service-bootstrap.mjs`, imajin-ai#2712), with the target kernel's own env (`DATABASE_URL` and
+     `AUTH_PRIVATE_KEY` from its `apps/kernel/.env.local`; `--env` takes `VAULT_PATH` from the kernel's ecosystem file,
+     so the grant lands in the same vault file that kernel reads):
      ```bash
-     npx tsx scripts/grant-attestation-internal-api-key.ts <LINKS_VAULT_BOOTSTRAP_DID>
+     # in ~/dev/imajin-ai (dev) or ~/prod/imajin-ai (prod); this checkout sits next to it
+     pnpm -r --filter './packages/**' build        # once per kernel checkout / after a pull
+     node --env-file=apps/kernel/.env.local scripts/provision-service-bootstrap.mjs --app links --env dev   # or: --env prod
+     # this checkout is not next to the kernel? pass its path instead of --app:
+     #   ... --service-dir /path/to/links --env dev
+     # validate first, changing nothing:  ... --app links --dry-run
      ```
-     `<LINKS_VAULT_BOOTSTRAP_DID>` is the `LINKS_VAULT_BOOTSTRAP_DID` value from step 1. The script is idempotent
-     and prints only a grant id (a pointer, not a secret). This repo never runs it.
-  3. Restart links (`scripts/deploy.sh <dev|prod>` or `pm2 startOrReload ecosystem.config.cjs --only <dev|prod>-links --update-env`). Without the
-     pair or the grant, boot does **not** fail: it logs `LINKS_VAULT_BOOTSTRAP_DID/_PRIVATE_KEY not set` or
+     It mints a registered `did:imajin:…` identity, writes `LINKS_VAULT_BOOTSTRAP_DID` /
+     `LINKS_VAULT_BOOTSTRAP_PRIVATE_KEY` into this checkout's `.env.local` (atomically, mode 0600), and ensures the
+     attestation-key grant in the same run — there is no separate grant script to run. Output is one line,
+     `links · <did> · minted|existing · <grantId>`: the key is never printed and the grant id is a pointer, not a
+     secret. It is idempotent (an existing pair is never rotated; a re-run only re-ensures the grant) and exits non-zero,
+     changing nothing, if `.env.local` is missing or holds only half of the pair — fix the file by hand, never re-mint.
+  3. Restart links (`scripts/deploy.sh <dev|prod>` or `pm2 startOrReload ecosystem.config.cjs --only <dev|prod>-links --update-env`).
+     Without the pair or the grant, boot does **not** fail: it logs `LINKS_VAULT_BOOTSTRAP_DID/_PRIVATE_KEY not set` or
      `No active vault grant for ATTESTATION_INTERNAL_API_KEY` at error level, the key stays unset, and
      kernel-internal calls fail closed. `node scripts/check-env.mjs <dev|prod>` warns while the pair is incomplete.
+     A healthy boot logs neither line.
 - **Create the databases/roles** and put the connection strings in each `.env.local`. Prod/dev already contain the
   `links` schema; the baseline adopts it in place.
 - **Caddy** — the route already exists; verify it against the [snippet below](#caddy).
