@@ -131,6 +131,25 @@ export const ENV_VARS = [
     prod: '/home/jin/.imajin/links.prod.keystore.json',
   },
   {
+    name: 'LINKS_VAULT_BOOTSTRAP_DID',
+    status: 'optional',
+    phase: 'runtime',
+    summary:
+      "DID of this app's vault bootstrap identity, issued by the kernel operator. Read by @ima-jin/auth's bootstrapInternalApiKey('links') at boot (instrumentation.ts) to fetch the vault-sourced ATTESTATION_INTERNAL_API_KEY; the DID must hold the attestation-key grant (docs/DEPLOY.md). Set it together with LINKS_VAULT_BOOTSTRAP_PRIVATE_KEY; if either is missing, boot logs an error and the key stays unset (kernel-internal calls fail closed). Not a secret.",
+    dev: 'did:imajin:<dev vault bootstrap DID>',
+    prod: 'did:imajin:<prod vault bootstrap DID>',
+  },
+  {
+    name: 'LINKS_VAULT_BOOTSTRAP_PRIVATE_KEY',
+    status: 'optional',
+    phase: 'runtime',
+    secret: true,
+    summary:
+      "Private key of this app's vault bootstrap identity (pair of LINKS_VAULT_BOOTSTRAP_DID), issued by the kernel operator. Authenticates the boot-time vault fetch of ATTESTATION_INTERNAL_API_KEY only; never the app's signing key. Keep .env.local mode 0600; never commit it.",
+    dev: '<dev vault bootstrap private key>',
+    prod: '<prod vault bootstrap private key>',
+  },
+  {
     name: 'IMAJIN_APP_PRIVATE_KEY',
     status: 'forbidden',
     phase: 'runtime',
@@ -224,7 +243,8 @@ export const ENV_VARS = [
     status: 'dependency',
     phase: 'runtime',
     secret: true,
-    summary: '@ima-jin/auth act-as / attestation calls. links exercises neither; leave unset. Never hand-mint it.',
+    summary:
+      "Vault-sourced: @ima-jin/auth's kernel-internal calls use the key fetched at boot via LINKS_VAULT_BOOTSTRAP_* (instrumentation.ts) and ignore this variable. Leave unset; never hand-mint it.",
     dev: '(unset)',
     prod: '(unset)',
   },
@@ -422,6 +442,16 @@ export function validateEnv(env, target) {
   const port = get('PORT');
   if (port !== '' && port !== String(TARGETS[target].port)) {
     warnings.push(`PORT is set in the env file but ${TARGETS[target].name} runs on ${TARGETS[target].port}; the pm2 entry's value wins.`);
+  }
+  const vaultDid = get('LINKS_VAULT_BOOTSTRAP_DID');
+  const vaultKey = get('LINKS_VAULT_BOOTSTRAP_PRIVATE_KEY');
+  if (vaultDid === '' || vaultKey === '') {
+    warnings.push(
+      'LINKS_VAULT_BOOTSTRAP_DID and LINKS_VAULT_BOOTSTRAP_PRIVATE_KEY are not both set — the vault-sourced ATTESTATION_INTERNAL_API_KEY cannot be fetched at boot, so kernel-internal calls will fail closed (docs/DEPLOY.md).',
+    );
+  }
+  if (get('ATTESTATION_INTERNAL_API_KEY') !== '') {
+    warnings.push('ATTESTATION_INTERNAL_API_KEY is set but ignored — the key is vault-sourced; remove it (docs/ENVIRONMENTS.md).');
   }
   if (get('IMAJIN_APP_CLAIM_CODE') !== '') {
     warnings.push('IMAJIN_APP_CLAIM_CODE is set — it is needed on the first boot only; remove it once the app has booted once.');

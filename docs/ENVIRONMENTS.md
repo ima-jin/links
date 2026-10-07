@@ -68,6 +68,8 @@ Read by the app or its dependencies and safe to leave unset.
 |---|---|---|---|---|
 | `IMAJIN_ENV` | runtime | `dev` | (unset) | Selects the kernel session cookie name in @ima-jin/config: `dev` → imajin_session_dev, anything else → imajin_session. MUST be `dev` on the dev instance (a production build is NODE_ENV=production, which does not imply dev); leave unset on prod. |
 | `IMAJIN_APP_KEYSTORE` | runtime | `/home/jin/.imajin/links.dev.keystore.json` | `/home/jin/.imajin/links.prod.keystore.json` | Path of this app's 0600 bootstrap keystore (never the vault key itself). Default ./.imajin/keystore.json relative to the process cwd. Must be writable, persist across deploys, and be separate for dev and prod. |
+| `LINKS_VAULT_BOOTSTRAP_DID` | runtime | `did:imajin:<dev vault bootstrap DID>` | `did:imajin:<prod vault bootstrap DID>` | DID of this app's vault bootstrap identity, issued by the kernel operator. Read by @ima-jin/auth's bootstrapInternalApiKey('links') at boot (instrumentation.ts) to fetch the vault-sourced ATTESTATION_INTERNAL_API_KEY; the DID must hold the attestation-key grant (docs/DEPLOY.md). Set it together with LINKS_VAULT_BOOTSTRAP_PRIVATE_KEY; if either is missing, boot logs an error and the key stays unset (kernel-internal calls fail closed). Not a secret. |
+| `LINKS_VAULT_BOOTSTRAP_PRIVATE_KEY` **(secret)** | runtime | `<dev vault bootstrap private key>` | `<prod vault bootstrap private key>` | Private key of this app's vault bootstrap identity (pair of LINKS_VAULT_BOOTSTRAP_DID), issued by the kernel operator. Authenticates the boot-time vault fetch of ATTESTATION_INTERNAL_API_KEY only; never the app's signing key. Keep .env.local mode 0600; never commit it. |
 | `NEXT_PUBLIC_SERVICE_PREFIX` | build | (unset) | (unset) | Read by @ima-jin/config to derive service URLs when NEXT_PUBLIC_KERNEL_URL is unset. Prefer NEXT_PUBLIC_KERNEL_URL; leave unset. |
 | `NEXT_PUBLIC_DOMAIN` | build | (unset) | (unset) | Companion to NEXT_PUBLIC_SERVICE_PREFIX (default imajin.ai). Leave unset; use NEXT_PUBLIC_KERNEL_URL. |
 | `LOG_LEVEL` | runtime | `debug` | `info` | pino log level for @ima-jin/logger (default info). Output is stdout only; pm2 captures it. |
@@ -101,7 +103,7 @@ Leave unset. Listed so the contract covers every variable the installed packages
 
 | Variable | When | Dev | Prod | What it does |
 |---|---|---|---|---|
-| `ATTESTATION_INTERNAL_API_KEY` **(secret)** | runtime | (unset) | (unset) | @ima-jin/auth act-as / attestation calls. links exercises neither; leave unset. Never hand-mint it. |
+| `ATTESTATION_INTERNAL_API_KEY` **(secret)** | runtime | (unset) | (unset) | Vault-sourced: @ima-jin/auth's kernel-internal calls use the key fetched at boot via LINKS_VAULT_BOOTSTRAP_* (instrumentation.ts) and ignore this variable. Leave unset; never hand-mint it. |
 | `AUTH_INTERNAL_API_KEY` **(secret)** | runtime | (unset) | (unset) | Deprecated @ima-jin/auth internal key (agent delegation). Not used by links; leave unset. |
 | `PROFILE_SERVICE_URL` | runtime | (unset) | (unset) | @ima-jin/auth credential resolution. Not used by links (profile lookup goes through IMAJIN_KERNEL_URL); leave unset. |
 | `PROFILE_INTERNAL_API_KEY` **(secret)** | runtime | (unset) | (unset) | @ima-jin/auth credential resolution key. Not used by links; leave unset. |
@@ -151,6 +153,11 @@ IMAJIN_APP_DID=did:imajin:REPLACE_ME
 # IMAJIN_APP_CLAIM_CODE=
 # Persistent, per-environment keystore (must survive deploys):
 IMAJIN_APP_KEYSTORE=/home/jin/.imajin/links.dev.keystore.json
+# Vault bootstrap identity for the vault-sourced ATTESTATION_INTERNAL_API_KEY
+# (issued by the kernel operator; separate per environment; docs/DEPLOY.md).
+# Never set ATTESTATION_INTERNAL_API_KEY itself — it is fetched at boot.
+LINKS_VAULT_BOOTSTRAP_DID=
+LINKS_VAULT_BOOTSTRAP_PRIVATE_KEY=
 
 LOG_LEVEL=debug
 ```
@@ -187,14 +194,20 @@ IMAJIN_APP_DID=did:imajin:REPLACE_ME
 # IMAJIN_APP_CLAIM_CODE=
 # Persistent, per-environment keystore (must survive deploys):
 IMAJIN_APP_KEYSTORE=/home/jin/.imajin/links.prod.keystore.json
+# Vault bootstrap identity for the vault-sourced ATTESTATION_INTERNAL_API_KEY
+# (issued by the kernel operator; separate per environment; docs/DEPLOY.md).
+# Never set ATTESTATION_INTERNAL_API_KEY itself — it is fetched at boot.
+LINKS_VAULT_BOOTSTRAP_DID=
+LINKS_VAULT_BOOTSTRAP_PRIVATE_KEY=
 
 LOG_LEVEL=info
 ```
 
 ## Secrets handling
 
-- `DATABASE_URL` (carries the DB password) and `IMAJIN_APP_CLAIM_CODE` are the only secret-bearing variables a
-  correct deployment sets. Keep `.env.local` mode `0600`, owned by the deploy user, never in git.
+- `DATABASE_URL` (carries the DB password), `LINKS_VAULT_BOOTSTRAP_PRIVATE_KEY` and `IMAJIN_APP_CLAIM_CODE` are the
+  only secret-bearing variables a correct deployment sets. `ATTESTATION_INTERNAL_API_KEY` is never one of them: it is
+  fetched from the vault at boot and held in process memory only.
 - This app's signing key is **never** in an env file — `IMAJIN_APP_PRIVATE_KEY` makes the app refuse to boot. The key
   is fetched at boot by `loadAppSigningKey()`; only the 0600 bootstrap keystore (`IMAJIN_APP_KEYSTORE`) is
   persisted. Treat that file like the claim code: never commit, copy, or sync it.
