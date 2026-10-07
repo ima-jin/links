@@ -13,12 +13,19 @@ import { bootstrapInternalApiKey } from '@ima-jin/auth';
 // Where @ima-jin/auth keeps the vault-sourced key (same slot for every bundle copy).
 const VAULT_KEY_STATE = Symbol.for('@ima-jin/auth/vault-attestation-internal-api-key');
 
+type VaultKeyHost = { [VAULT_KEY_STATE]?: unknown };
+
 function vaultKeySlot(): unknown {
-  return (globalThis as { [VAULT_KEY_STATE]?: unknown })[VAULT_KEY_STATE];
+  return (globalThis as VaultKeyHost)[VAULT_KEY_STATE];
 }
 
 function clearVaultKeySlot(): void {
-  delete (globalThis as { [VAULT_KEY_STATE]?: unknown })[VAULT_KEY_STATE];
+  delete (globalThis as VaultKeyHost)[VAULT_KEY_STATE];
+}
+
+function stubVaultPair(did: string, privateKey: string): void {
+  vi.stubEnv('LINKS_VAULT_BOOTSTRAP_DID', did);
+  vi.stubEnv('LINKS_VAULT_BOOTSTRAP_PRIVATE_KEY', privateKey);
 }
 
 describe('bootstrapInternalApiKey (real helper, no network)', () => {
@@ -38,39 +45,23 @@ describe('bootstrapInternalApiKey (real helper, no network)', () => {
     clearVaultKeySlot();
   });
 
-  it('resolves without a key and without touching the network when the LINKS_VAULT_BOOTSTRAP_* pair is unset', async () => {
-    vi.stubEnv('LINKS_VAULT_BOOTSTRAP_DID', '');
-    vi.stubEnv('LINKS_VAULT_BOOTSTRAP_PRIVATE_KEY', '');
-
-    await expect(bootstrapInternalApiKey('links')).resolves.toBeUndefined();
-
-    expect(fetchMock).not.toHaveBeenCalled();
-    expect(vaultKeySlot()).toBeUndefined();
-  });
-
-  it('requires both halves of the identity pair', async () => {
-    vi.stubEnv('LINKS_VAULT_BOOTSTRAP_DID', 'did:imajin:links-bootstrap-under-test');
-    vi.stubEnv('LINKS_VAULT_BOOTSTRAP_PRIVATE_KEY', '');
-
-    await expect(bootstrapInternalApiKey('links')).resolves.toBeUndefined();
-
-    expect(fetchMock).not.toHaveBeenCalled();
-    expect(vaultKeySlot()).toBeUndefined();
-  });
-
-  it('does not adopt a hand-set ATTESTATION_INTERNAL_API_KEY when the pair is unset', async () => {
-    vi.stubEnv('LINKS_VAULT_BOOTSTRAP_DID', '');
-    vi.stubEnv('LINKS_VAULT_BOOTSTRAP_PRIVATE_KEY', '');
+  it.each([
+    ['both halves are unset', '', ''],
+    ['only the DID is set', 'did:imajin:links-bootstrap-under-test', ''],
+    ['only the private key is set', '', 'not-a-real-key-placeholder'],
+  ])('resolves with no key and no network call when %s', async (_case, did, privateKey) => {
+    stubVaultPair(did, privateKey);
+    // A hand-set value must not be adopted as a fallback.
     vi.stubEnv('ATTESTATION_INTERNAL_API_KEY', 'hand-set-placeholder');
 
-    await bootstrapInternalApiKey('links');
+    await expect(bootstrapInternalApiKey('links')).resolves.toBeUndefined();
 
+    expect(fetchMock).not.toHaveBeenCalled();
     expect(vaultKeySlot()).toBeUndefined();
   });
 
   it('resolves and leaves the key unset when the vault fetch fails', async () => {
-    vi.stubEnv('LINKS_VAULT_BOOTSTRAP_DID', 'did:imajin:links-bootstrap-under-test');
-    vi.stubEnv('LINKS_VAULT_BOOTSTRAP_PRIVATE_KEY', 'not-a-real-key-placeholder');
+    stubVaultPair('did:imajin:links-bootstrap-under-test', 'not-a-real-key-placeholder');
     vi.stubEnv('IMAJIN_KERNEL_URL', 'https://kernel.invalid');
     vi.stubEnv('AUTH_SERVICE_URL', 'https://kernel.invalid/auth');
 

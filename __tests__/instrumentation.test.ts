@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { bootstrapSigningIdentityMock, bootstrapInternalApiKeyMock } = vi.hoisted(() => ({
   bootstrapSigningIdentityMock: vi.fn(),
@@ -45,7 +45,19 @@ describe('validateSigningKeyBootEnv', () => {
   });
 });
 
+/** Stubs a valid Node.js-runtime boot env; pass '' for an app DID to make it invalid. */
+function stubNodeBootEnv(appDid = 'did:imajin:app-under-test'): void {
+  vi.stubEnv('NEXT_RUNTIME', 'nodejs');
+  vi.stubEnv('IMAJIN_APP_PRIVATE_KEY', '');
+  vi.stubEnv('IMAJIN_APP_DID', appDid);
+}
+
 describe('register', () => {
+  beforeEach(() => {
+    bootstrapSigningIdentityMock.mockResolvedValue(undefined);
+    bootstrapInternalApiKeyMock.mockResolvedValue(undefined);
+  });
+
   afterEach(() => {
     vi.unstubAllEnvs();
     bootstrapSigningIdentityMock.mockReset();
@@ -62,10 +74,7 @@ describe('register', () => {
   });
 
   it('bootstraps the signing identity once the boot env is valid', async () => {
-    vi.stubEnv('NEXT_RUNTIME', 'nodejs');
-    vi.stubEnv('IMAJIN_APP_PRIVATE_KEY', '');
-    vi.stubEnv('IMAJIN_APP_DID', 'did:imajin:app-under-test');
-    bootstrapSigningIdentityMock.mockResolvedValue(undefined);
+    stubNodeBootEnv();
     const { register } = await import('../instrumentation');
 
     await register();
@@ -73,15 +82,16 @@ describe('register', () => {
     expect(bootstrapSigningIdentityMock).toHaveBeenCalledTimes(1);
   });
 
-  it('fetches the vault-sourced internal API key for `links` right after the signing identity', async () => {
-    vi.stubEnv('NEXT_RUNTIME', 'nodejs');
-    vi.stubEnv('IMAJIN_APP_PRIVATE_KEY', '');
-    vi.stubEnv('IMAJIN_APP_DID', 'did:imajin:app-under-test');
-    bootstrapSigningIdentityMock.mockResolvedValue(undefined);
-    bootstrapInternalApiKeyMock.mockResolvedValue(undefined);
+  it('fetches the vault-sourced key for `links` right after the signing identity, even with the vault pair unset', async () => {
+    // bootstrapInternalApiKey never throws: a missing LINKS_VAULT_BOOTSTRAP_* pair, a
+    // missing vault grant or a failed fetch is logged and leaves the key unset, so
+    // boot (unclaimed mode included) carries on.
+    stubNodeBootEnv();
+    vi.stubEnv('LINKS_VAULT_BOOTSTRAP_DID', '');
+    vi.stubEnv('LINKS_VAULT_BOOTSTRAP_PRIVATE_KEY', '');
     const { register } = await import('../instrumentation');
 
-    await register();
+    await expect(register()).resolves.toBeUndefined();
 
     expect(bootstrapInternalApiKeyMock).toHaveBeenCalledTimes(1);
     expect(bootstrapInternalApiKeyMock).toHaveBeenCalledWith('links');
@@ -90,26 +100,8 @@ describe('register', () => {
     );
   });
 
-  it('boots (unclaimed mode included) when the helper reports a missing identity or grant by resolving', async () => {
-    // bootstrapInternalApiKey never throws: a missing LINKS_VAULT_BOOTSTRAP_* pair, a
-    // missing vault grant or a failed fetch is logged and leaves the key unset.
-    vi.stubEnv('NEXT_RUNTIME', 'nodejs');
-    vi.stubEnv('IMAJIN_APP_PRIVATE_KEY', '');
-    vi.stubEnv('IMAJIN_APP_DID', 'did:imajin:app-under-test');
-    vi.stubEnv('LINKS_VAULT_BOOTSTRAP_DID', '');
-    vi.stubEnv('LINKS_VAULT_BOOTSTRAP_PRIVATE_KEY', '');
-    bootstrapSigningIdentityMock.mockResolvedValue(undefined);
-    bootstrapInternalApiKeyMock.mockResolvedValue(undefined);
-    const { register } = await import('../instrumentation');
-
-    await expect(register()).resolves.toBeUndefined();
-    expect(bootstrapInternalApiKeyMock).toHaveBeenCalledWith('links');
-  });
-
   it('does not fetch the key when the boot env is invalid', async () => {
-    vi.stubEnv('NEXT_RUNTIME', 'nodejs');
-    vi.stubEnv('IMAJIN_APP_PRIVATE_KEY', '');
-    vi.stubEnv('IMAJIN_APP_DID', '');
+    stubNodeBootEnv('');
     const { register } = await import('../instrumentation');
 
     await expect(register()).rejects.toThrow(/IMAJIN_APP_DID is not set/);
@@ -118,9 +110,7 @@ describe('register', () => {
   });
 
   it('propagates a real signing-identity failure without fetching the key', async () => {
-    vi.stubEnv('NEXT_RUNTIME', 'nodejs');
-    vi.stubEnv('IMAJIN_APP_PRIVATE_KEY', '');
-    vi.stubEnv('IMAJIN_APP_DID', 'did:imajin:app-under-test');
+    stubNodeBootEnv();
     bootstrapSigningIdentityMock.mockRejectedValue(new Error('kernel refused the claim code'));
     const { register } = await import('../instrumentation');
 
