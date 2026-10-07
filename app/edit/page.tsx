@@ -4,6 +4,7 @@ import NextLink from 'next/link';
 import { useEffect, useState } from 'react';
 import { buildPublicUrl, apiFetch } from '@ima-jin/config';
 import { useToast } from '@/components/Toast';
+import { PublicPageLink } from '@/components/PublicPageLink';
 
 interface LinkItem {
   id: string;
@@ -87,7 +88,7 @@ export default function EditPage() {
   const [linkFormData, setLinkFormData] = useState(EMPTY_LINK_FORM);
 
   useEffect(() => {
-    fetchPage();
+    void fetchPage();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -292,7 +293,7 @@ export default function EditPage() {
             onClick={() => {
               setAutoCreateError(false);
               setLoading(true);
-              fetchPage();
+              void fetchPage();
             }}
             className="px-6 py-3 bg-orange-500 text-white rounded-lg font-semibold hover:bg-orange-600 transition"
           >
@@ -310,9 +311,7 @@ export default function EditPage() {
           <div>
             <h1 className="text-3xl font-bold">My Links</h1>
             <p className="text-gray-600 dark:text-gray-400 mt-1">
-              <a href={`/${page.handle}`} target="_blank" rel="noreferrer" className="text-orange-500 hover:underline">
-                links.imajin.ai/{page.handle}
-              </a>
+              <PublicPageLink handle={page.handle} />
             </p>
           </div>
           <div className="flex gap-3">
@@ -338,7 +337,9 @@ export default function EditPage() {
         {showEditForm && (
           <div className="mb-8 p-6 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
             <h2 className="text-xl font-semibold mb-4">Edit Page</h2>
-            <form onSubmit={updatePage} className="space-y-4">
+            <form onSubmit={(e) => {
+              void updatePage(e);
+            }} className="space-y-4">
               <div>
                 <label htmlFor="links-theme" className="block text-sm font-medium mb-2">
                   Theme
@@ -384,10 +385,12 @@ export default function EditPage() {
           </button>
         </div>
 
-        {(showLinkForm || editingLink) && (
+        {(showLinkForm || editingLink !== null) && (
           <div className="mb-6 p-6 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
             <h3 className="text-lg font-semibold mb-4">{editingLink ? 'Edit Link' : 'Add New Link'}</h3>
-            <form onSubmit={editingLink ? updateLink : addLink} className="space-y-4">
+            <form onSubmit={(e) => {
+                void (editingLink ? updateLink(e) : addLink(e));
+              }} className="space-y-4">
               <div>
                 <label htmlFor="link-title" className="block text-sm font-medium mb-2">
                   Title *
@@ -493,7 +496,7 @@ export default function EditPage() {
               >
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
-                    {link.icon && <span>{link.icon}</span>}
+                    {link.icon ? <span>{link.icon}</span> : null}
                     <span className="font-semibold">{link.title}</span>
                     {!link.isActive && <span className="text-xs px-2 py-1 bg-gray-200 dark:bg-gray-700 rounded">Inactive</span>}
                     {link.visibility === 'authenticated' && (
@@ -508,7 +511,9 @@ export default function EditPage() {
                 <div className="flex gap-2">
                   <button
                     type="button"
-                    onClick={() => moveLink(link.id, 'up')}
+                    onClick={() => {
+                      void moveLink(link.id, 'up');
+                    }}
                     disabled={index === 0}
                     className="px-2 py-1 border border-gray-300 dark:border-gray-700 rounded disabled:opacity-30 hover:bg-gray-100 dark:hover:bg-gray-700"
                   >
@@ -516,7 +521,9 @@ export default function EditPage() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => moveLink(link.id, 'down')}
+                    onClick={() => {
+                      void moveLink(link.id, 'down');
+                    }}
                     disabled={index === page.links.length - 1}
                     className="px-2 py-1 border border-gray-300 dark:border-gray-700 rounded disabled:opacity-30 hover:bg-gray-100 dark:hover:bg-gray-700"
                   >
@@ -540,7 +547,9 @@ export default function EditPage() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => deleteLink(link.id)}
+                    onClick={() => {
+                      void deleteLink(link.id);
+                    }}
                     className="px-3 py-1 border border-red-300 dark:border-red-700 text-red-600 dark:text-red-400 rounded hover:bg-red-50 dark:hover:bg-red-900/20"
                   >
                     Delete

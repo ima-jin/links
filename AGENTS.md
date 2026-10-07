@@ -3,7 +3,7 @@
   APP NAME: links · APP DID: did:imajin:REPLACE_ME (set at registration, #1990)
   SCOPES: none required (this app authenticates callers via authenticate()/
     requireSessionOrAppToken and relies on the caller's own DID + this app's
-    own ownership checks) · DOMAIN: links.imajin.ai (Caddy /links path prefix)
+    own ownership checks) · DOMAIN: kernel host + /links path prefix (Caddy)
   KERNEL: prod https://jin.imajin.ai | dev https://dev-jin.imajin.ai
   REFERENCE APP: ima-jin/dykil (score-0 sibling; this app instead follows dykil's
     explicit product decision to adopt @ima-jin/auth's requireSessionOrAppToken
@@ -203,7 +203,9 @@ Full text: `ima-jin/conventions/ISSUE-CONVENTIONS.md`. This §7 is kept in sync 
   authenticates callers via a single `authenticate()` interface
   (`src/lib/auth/authenticate.ts`, currently `requireSessionOrAppToken`) and enforces
   ownership itself (a page/link's `did` column must match the caller's DID).
-- **Domain:** links.imajin.ai (pm2 entry `links`, port `3102`, Caddy route unchanged per #1986).
+- **Domain:** served under the kernel host at the `/links` base path (prod `https://jin.imajin.ai/links`, dev
+  `https://dev-jin.imajin.ai/links`; pm2 entry `links`, port `3102`, Caddy route unchanged per #1986). Build public
+  page URLs with `publicPageUrl()` (`src/lib/public-url.ts`) from `NEXT_PUBLIC_APP_URL` — never hard-code a host.
 - **The real-world loop it instruments:** a DID publishes a curated list of links (their own
   page); a visitor clicks one. No paid leg.
 - **Domain events it emits (via kernel API):** none — this app's own schema is the record of

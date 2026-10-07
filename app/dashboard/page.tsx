@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { buildPublicUrl, apiFetch } from '@ima-jin/config';
 import { useToast } from '@/components/Toast';
+import { PublicPageLink } from '@/components/PublicPageLink';
+import { publicPageUrl } from '@/lib/public-url';
 
 interface LinkStats {
   id: string;
@@ -65,7 +67,7 @@ export default function DashboardPage() {
       }
     };
 
-    fetchStats();
+    void fetchStats();
   }, [router, toast]);
 
   if (loading) {
@@ -96,6 +98,7 @@ export default function DashboardPage() {
 
   const maxClicks = Math.max(...stats.clicksByLink.map((l) => l.clicks), 1);
   const maxDayClicks = Math.max(...stats.clicksByDay.map((d) => d.clicks), 1);
+  const publicUrl = publicPageUrl(handle);
 
   return (
     <div className="min-h-screen py-12 px-4 bg-gray-50 dark:bg-gray-900">
@@ -104,16 +107,14 @@ export default function DashboardPage() {
           <div>
             <h1 className="text-3xl font-bold mb-2">My Links Page</h1>
             <p className="text-gray-600 dark:text-gray-400">
-              <a href={`/${handle}`} target="_blank" rel="noreferrer" className="text-orange-500 hover:underline">
-                links.imajin.ai/{handle}
-              </a>
+              <PublicPageLink handle={handle} />
             </p>
           </div>
           <div className="flex gap-3">
             <button
               type="button"
               onClick={() => {
-                navigator.clipboard.writeText(`${globalThis.location.origin}/${handle}`);
+                void navigator.clipboard.writeText(publicUrl);
                 toast.success('Link copied!');
               }}
               className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-700 transition"
@@ -128,7 +129,7 @@ export default function DashboardPage() {
               ✏️ Edit Page
             </button>
             <a
-              href={`/${handle}`}
+              href={publicUrl}
               target="_blank"
               rel="noreferrer"
               className="px-4 py-2 bg-orange-500 text-white rounded-lg text-sm font-medium hover:bg-orange-600 transition"

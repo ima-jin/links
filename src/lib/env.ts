@@ -18,11 +18,10 @@ export function authServiceUrl(): string {
 
 /** This app's own host, used as the `aud` for scoped app-token verification. */
 export function thisAppHost(): string {
-  const base = process.env.NEXT_PUBLIC_APP_URL;
-  if (!base) return 'links.imajin.ai';
+  const base = required('NEXT_PUBLIC_APP_URL');
   try {
     return new URL(base).host;
   } catch {
-    return 'links.imajin.ai';
+    throw new Error('NEXT_PUBLIC_APP_URL is not a valid URL — see .env.example.');
   }
 }

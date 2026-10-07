@@ -163,6 +163,14 @@ describe('validateEnv', () => {
     expect(validateEnv({ ...validProd(), AUTH_SERVICE_URL: 'not a url' }, 'prod').errors.join('\n')).toMatch(/not a valid http/);
   });
 
+  it('fails check-env when NEXT_PUBLIC_APP_URL is missing, invalid or lacks the /links base path', () => {
+    const appUrlErrors = (value: string) => validateEnv({ ...validProd(), NEXT_PUBLIC_APP_URL: value }, 'prod').errors.join('\n');
+    expect(appUrlErrors('')).toMatch(/NEXT_PUBLIC_APP_URL is required but not set/);
+    expect(appUrlErrors('not a url')).toMatch(/NEXT_PUBLIC_APP_URL is not a valid http/);
+    expect(appUrlErrors('https://jin.imajin.ai')).toMatch(/NEXT_PUBLIC_APP_URL must end with the \/links base path/);
+    expect(appUrlErrors('https://jin.imajin.ai/links/')).toBe('');
+  });
+
   it('rejects a wrong schema, base path, database URL and DID', () => {
     const errors = validateEnv(
       { ...validProd(), APP_DB_SCHEMA: 'other', NEXT_PUBLIC_BASE_PATH: '/x', DATABASE_URL: 'mysql://h/db', IMAJIN_APP_DID: 'abc' },

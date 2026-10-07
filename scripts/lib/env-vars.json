@@ -51,8 +51,8 @@
   {
     "name": "NEXT_PUBLIC_APP_URL",
     "status": "required",
-    "phase": "runtime",
-    "summary": "This app's public URL. Its HOST is the `aud` used to verify scoped app tokens — it must match a host in this app's registered tokenAudiences (operator-confirmed at registration).",
+    "phase": "build",
+    "summary": "This app's public URL including the `/links` base path. Public pages are served at `${NEXT_PUBLIC_APP_URL}/{handle}` (shown and linked on the edit and dashboard pages; there is no fallback host, so unset/invalid fails). Baked into the client bundle at build time; rebuild after changing. Its HOST is the `aud` used to verify scoped app tokens — it must match a host in this app's registered tokenAudiences (operator-confirmed at registration).",
     "dev": "https://dev-jin.imajin.ai/links",
     "prod": "https://jin.imajin.ai/links"
   },
