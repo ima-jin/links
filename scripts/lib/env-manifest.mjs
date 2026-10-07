@@ -20,6 +20,33 @@ export const TARGETS = {
 export const BASE_PATH = '/links';
 
 /**
+ * The vault bootstrap identity pair read by `bootstrapInternalApiKey('links')`
+ * (instrumentation.ts; imajin-ai#2455, #2468). Built here, rather than as two
+ * more literal entries, because the pair differs from the other entries only
+ * in its text.
+ */
+function vaultBootstrapVars() {
+  const shared = { status: 'optional', phase: 'runtime' };
+  return [
+    {
+      ...shared,
+      name: 'LINKS_VAULT_BOOTSTRAP_DID',
+      summary: "DID of this app's vault bootstrap identity, issued by the kernel operator. Read by @ima-jin/auth's bootstrapInternalApiKey('links') at boot (instrumentation.ts) to fetch the vault-sourced ATTESTATION_INTERNAL_API_KEY; the DID must hold the attestation-key grant (docs/DEPLOY.md). Set it together with LINKS_VAULT_BOOTSTRAP_PRIVATE_KEY; if either is missing, boot logs an error and the key stays unset (kernel-internal calls fail closed). Not a secret.",
+      dev: 'did:imajin:<dev vault bootstrap DID>',
+      prod: 'did:imajin:<prod vault bootstrap DID>',
+    },
+    {
+      ...shared,
+      name: 'LINKS_VAULT_BOOTSTRAP_PRIVATE_KEY',
+      secret: true,
+      summary: "Private key of this app's vault bootstrap identity (pair of LINKS_VAULT_BOOTSTRAP_DID), issued by the kernel operator. Authenticates the boot-time vault fetch of ATTESTATION_INTERNAL_API_KEY only; never the app's signing key. Keep .env.local mode 0600; never commit it.",
+      dev: '<dev vault bootstrap private key>',
+      prod: '<prod vault bootstrap private key>',
+    },
+  ];
+}
+
+/**
  * status:
  *   required         must be set in the env file for a deployed instance
  *   first-boot       required only on the very first boot, then removed
@@ -130,25 +157,7 @@ export const ENV_VARS = [
     dev: '/home/jin/.imajin/links.dev.keystore.json',
     prod: '/home/jin/.imajin/links.prod.keystore.json',
   },
-  {
-    name: 'LINKS_VAULT_BOOTSTRAP_DID',
-    status: 'optional',
-    phase: 'runtime',
-    summary:
-      "DID of this app's vault bootstrap identity, issued by the kernel operator. Read by @ima-jin/auth's bootstrapInternalApiKey('links') at boot (instrumentation.ts) to fetch the vault-sourced ATTESTATION_INTERNAL_API_KEY; the DID must hold the attestation-key grant (docs/DEPLOY.md). Set it together with LINKS_VAULT_BOOTSTRAP_PRIVATE_KEY; if either is missing, boot logs an error and the key stays unset (kernel-internal calls fail closed). Not a secret.",
-    dev: 'did:imajin:<dev vault bootstrap DID>',
-    prod: 'did:imajin:<prod vault bootstrap DID>',
-  },
-  {
-    name: 'LINKS_VAULT_BOOTSTRAP_PRIVATE_KEY',
-    status: 'optional',
-    phase: 'runtime',
-    secret: true,
-    summary:
-      "Private key of this app's vault bootstrap identity (pair of LINKS_VAULT_BOOTSTRAP_DID), issued by the kernel operator. Authenticates the boot-time vault fetch of ATTESTATION_INTERNAL_API_KEY only; never the app's signing key. Keep .env.local mode 0600; never commit it.",
-    dev: '<dev vault bootstrap private key>',
-    prod: '<prod vault bootstrap private key>',
-  },
+  ...vaultBootstrapVars(),
   {
     name: 'IMAJIN_APP_PRIVATE_KEY',
     status: 'forbidden',
@@ -243,8 +252,7 @@ export const ENV_VARS = [
     status: 'dependency',
     phase: 'runtime',
     secret: true,
-    summary:
-      "Vault-sourced: @ima-jin/auth's kernel-internal calls use the key fetched at boot via LINKS_VAULT_BOOTSTRAP_* (instrumentation.ts) and ignore this variable. Leave unset; never hand-mint it.",
+    summary: "Vault-sourced: @ima-jin/auth's kernel-internal calls use the key fetched at boot via LINKS_VAULT_BOOTSTRAP_* (instrumentation.ts) and ignore this variable. Leave unset; never hand-mint it.",
     dev: '(unset)',
     prod: '(unset)',
   },
