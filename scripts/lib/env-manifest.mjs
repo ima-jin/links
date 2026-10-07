@@ -24,6 +24,7 @@ export const BASE_PATH = '/links';
  * (instrumentation.ts; imajin-ai#2455, #2468). Built here, rather than as two
  * more literal entries, because the pair differs from the other entries only
  * in its text.
+ * @returns {Array<{ name: string, status: string, phase: string, secret?: boolean, summary: string, dev: string, prod: string }>}
  */
 function vaultBootstrapVars() {
   const shared = { status: 'optional', phase: 'runtime' };
