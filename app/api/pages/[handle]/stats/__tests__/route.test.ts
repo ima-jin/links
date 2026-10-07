@@ -22,7 +22,7 @@ vi.mock('@/db', () => ({
 const params = Promise.resolve({ handle: 'jin' });
 
 function getRequest() {
-  return new NextRequest('https://links.imajin.ai/api/pages/jin/stats');
+  return new NextRequest('https://links.example.test/api/pages/jin/stats');
 }
 
 describe('GET /api/pages/:handle/stats', () => {

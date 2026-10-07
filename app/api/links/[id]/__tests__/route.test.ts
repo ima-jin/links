@@ -33,7 +33,7 @@ describe('PUT /api/links/:id', () => {
   });
 
   function putRequest(body: unknown) {
-    return new NextRequest('https://links.imajin.ai/api/links/link_1', { method: 'PUT', body: JSON.stringify(body) });
+    return new NextRequest('https://links.example.test/api/links/link_1', { method: 'PUT', body: JSON.stringify(body) });
   }
 
   it('returns 404 when the link does not exist', async () => {
@@ -88,7 +88,7 @@ describe('DELETE /api/links/:id', () => {
   });
 
   function deleteRequest() {
-    return new NextRequest('https://links.imajin.ai/api/links/link_1', { method: 'DELETE' });
+    return new NextRequest('https://links.example.test/api/links/link_1', { method: 'DELETE' });
   }
 
   it('returns 403 when the caller does not own the link', async () => {

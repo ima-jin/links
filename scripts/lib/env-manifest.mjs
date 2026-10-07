@@ -133,6 +133,10 @@ export function validateEnv(env, target) {
   const appUrl = get('NEXT_PUBLIC_APP_URL');
   if (appUrl !== '') {
     checkKernelUrl('NEXT_PUBLIC_APP_URL', appUrl, target, errors);
+    const appPath = parseUrl(appUrl)?.pathname.replace(/\/+$/, '');
+    if (appPath !== undefined && appPath !== BASE_PATH) {
+      errors.push(`NEXT_PUBLIC_APP_URL must end with the ${BASE_PATH} base path — public pages are served at \${NEXT_PUBLIC_APP_URL}/{handle}.`);
+    }
   }
 
   if (get('IMAJIN_APP_DID') !== '' && !get('IMAJIN_APP_DID').startsWith('did:imajin:')) {

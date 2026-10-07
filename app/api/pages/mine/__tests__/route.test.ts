@@ -19,7 +19,7 @@ vi.mock('@/db', () => ({
 }));
 
 function getRequest() {
-  return new NextRequest('https://links.imajin.ai/api/pages/mine');
+  return new NextRequest('https://links.example.test/api/pages/mine');
 }
 
 describe('GET /api/pages/mine', () => {
