@@ -64,6 +64,24 @@ Use `~/dev/links` and `.env.dev.example` / `scripts/deploy.sh dev` for dev. Depl
   code is single-use: a successful claim writes the keystore (`IMAJIN_APP_KEYSTORE`, mode 0600) and `/links/claim`
   404s from then on. Do not lose the keystore — a lost keystore needs a `reissueClaim` rebind. Fallback (advanced/CI):
   set `IMAJIN_APP_CLAIM_CODE` in `.env.local` before first boot instead, and **delete it afterwards**.
+- **Provide the vault bootstrap identity and grant it the attestation key** (refs imajin-ai#2455, #2468). links reads
+  the shared `ATTESTATION_INTERNAL_API_KEY` from the vault at boot (`bootstrapInternalApiKey('links')` in
+  `instrumentation.ts`) — it is never set by hand. Per environment, in this order:
+  1. The kernel operator issues links a vault bootstrap identity (a registered `did:imajin:…` plus its private key)
+     and you put the pair in that environment's `.env.local` as `LINKS_VAULT_BOOTSTRAP_DID` /
+     `LINKS_VAULT_BOOTSTRAP_PRIVATE_KEY` (separate pair for dev and prod; keep the file mode 0600).
+  2. Grant that DID the attestation key. This runs against the **live vault**, from a checkout of
+     [ima-jin/imajin-ai](https://github.com/ima-jin/imajin-ai), with the target kernel's own `DATABASE_URL`,
+     `AUTH_PRIVATE_KEY` and (if set) `VAULT_PATH` — the grant must land in the same vault file that kernel reads:
+     ```bash
+     npx tsx scripts/grant-attestation-internal-api-key.ts <LINKS_VAULT_BOOTSTRAP_DID>
+     ```
+     `<LINKS_VAULT_BOOTSTRAP_DID>` is the `LINKS_VAULT_BOOTSTRAP_DID` value from step 1. The script is idempotent
+     and prints only a grant id (a pointer, not a secret). This repo never runs it.
+  3. Restart links (`scripts/deploy.sh <dev|prod>` or `pm2 restart <dev|prod>-links --update-env`). Without the
+     pair or the grant, boot does **not** fail: it logs `LINKS_VAULT_BOOTSTRAP_DID/_PRIVATE_KEY not set` or
+     `No active vault grant for ATTESTATION_INTERNAL_API_KEY` at error level, the key stays unset, and
+     kernel-internal calls fail closed. `node scripts/check-env.mjs <dev|prod>` warns while the pair is incomplete.
 - **Create the databases/roles** and put the connection strings in each `.env.local`. Prod/dev already contain the
   `links` schema; the baseline adopts it in place.
 - **Caddy** — the route already exists; verify it against the [snippet below](#caddy).

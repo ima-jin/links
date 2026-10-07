@@ -123,7 +123,12 @@ describe('validateEnv', () => {
 
   it('accepts a fully filled-in file for each target', () => {
     for (const [target, file] of [['dev', '.env.dev.example'], ['prod', '.env.prod.example']] as const) {
-      const env = { ...parseEnv(read(file)), IMAJIN_APP_DID: 'did:imajin:abc123' };
+      const env = {
+        ...parseEnv(read(file)),
+        IMAJIN_APP_DID: 'did:imajin:abc123',
+        LINKS_VAULT_BOOTSTRAP_DID: 'did:imajin:vault-bootstrap-under-test',
+        LINKS_VAULT_BOOTSTRAP_PRIVATE_KEY: 'placeholder-not-a-real-key',
+      };
       expect(validateEnv(env, target)).toEqual({ errors: [], warnings: [] });
     }
   });
@@ -178,6 +183,26 @@ describe('validateEnv', () => {
     expect(warnings.join('\n')).toMatch(/IMAJIN_APP_CLAIM_CODE is set/);
     expect(warnings.join('\n')).toMatch(/PORT is set/);
     expect(warnings.join('\n')).toMatch(/LOG_DB_TRANSPORT=true/);
+  });
+
+  it('warns (without failing) while the vault bootstrap pair is incomplete', () => {
+    const vaultDid = 'did:imajin:vault-bootstrap-under-test';
+    for (const partial of [
+      {},
+      { LINKS_VAULT_BOOTSTRAP_DID: vaultDid },
+      { LINKS_VAULT_BOOTSTRAP_PRIVATE_KEY: 'placeholder-not-a-real-key' },
+    ]) {
+      const { errors, warnings } = validateEnv({ ...validProd(), ...partial }, 'prod');
+      expect(errors).toEqual([]);
+      expect(warnings.join('\n')).toMatch(/LINKS_VAULT_BOOTSTRAP_DID and LINKS_VAULT_BOOTSTRAP_PRIVATE_KEY are not both set/);
+    }
+  });
+
+  it('warns that a hand-set ATTESTATION_INTERNAL_API_KEY is ignored, without echoing it', () => {
+    const { errors, warnings } = validateEnv({ ...validProd(), ATTESTATION_INTERNAL_API_KEY: 'hand-set-placeholder' }, 'prod');
+    expect(errors).toEqual([]);
+    expect(warnings.join('\n')).toMatch(/ATTESTATION_INTERNAL_API_KEY is set but ignored/);
+    expect(warnings.join('\n')).not.toContain('hand-set-placeholder');
   });
 
   it('throws on an unknown target', () => {

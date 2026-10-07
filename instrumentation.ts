@@ -22,6 +22,17 @@ import { bootstrapSigningIdentity } from '@/lib/auth/signing-identity';
  * With neither a keystore nor `IMAJIN_APP_CLAIM_CODE`, `bootstrapSigningIdentity()`
  * returns without throwing (unclaimed boot mode, #2427) and an operator claims
  * this app at `<app>/claim`.
+ *
+ * It also fetches the vault-sourced `ATTESTATION_INTERNAL_API_KEY` (imajin-ai#2455,
+ * #2468) that `@ima-jin/auth`'s kernel-internal calls authenticate with, via
+ * `bootstrapInternalApiKey('links')` using this app's
+ * `LINKS_VAULT_BOOTSTRAP_DID` / `LINKS_VAULT_BOOTSTRAP_PRIVATE_KEY` identity.
+ * The key is held in memory by `@ima-jin/auth` (never `process.env`), and the
+ * helper never throws: a missing identity, a missing vault grant or a failed
+ * fetch is logged as an error and leaves the key unset, so kernel-internal
+ * calls fail closed instead of crashing boot. It is imported dynamically so
+ * `@ima-jin/auth` stays out of any non-Node.js instrumentation bundle, and it
+ * runs in unclaimed boot mode too — it does not depend on the signing key.
  */
 export function validateSigningKeyBootEnv(): void {
   if (process.env.IMAJIN_APP_PRIVATE_KEY) {
@@ -47,4 +58,7 @@ export async function register(): Promise<void> {
 
   validateSigningKeyBootEnv();
   await bootstrapSigningIdentity();
+
+  const { bootstrapInternalApiKey } = await import('@ima-jin/auth');
+  await bootstrapInternalApiKey('links');
 }
