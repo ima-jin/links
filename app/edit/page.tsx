@@ -496,7 +496,7 @@ export default function EditPage() {
               >
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
-                    {link.icon && <span>{link.icon}</span>}
+                    {link.icon ? <span>{link.icon}</span> : null}
                     <span className="font-semibold">{link.title}</span>
                     {!link.isActive && <span className="text-xs px-2 py-1 bg-gray-200 dark:bg-gray-700 rounded">Inactive</span>}
                     {link.visibility === 'authenticated' && (
