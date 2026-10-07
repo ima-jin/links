@@ -78,7 +78,7 @@ Use `~/dev/links` and `.env.dev.example` / `scripts/deploy.sh dev` for dev. Depl
      ```
      `<LINKS_VAULT_BOOTSTRAP_DID>` is the `LINKS_VAULT_BOOTSTRAP_DID` value from step 1. The script is idempotent
      and prints only a grant id (a pointer, not a secret). This repo never runs it.
-  3. Restart links (`scripts/deploy.sh <dev|prod>` or `pm2 restart <dev|prod>-links --update-env`). Without the
+  3. Restart links (`scripts/deploy.sh <dev|prod>` or `pm2 startOrReload ecosystem.config.cjs --only <dev|prod>-links --update-env`). Without the
      pair or the grant, boot does **not** fail: it logs `LINKS_VAULT_BOOTSTRAP_DID/_PRIVATE_KEY not set` or
      `No active vault grant for ATTESTATION_INTERNAL_API_KEY` at error level, the key stays unset, and
      kernel-internal calls fail closed. `node scripts/check-env.mjs <dev|prod>` warns while the pair is incomplete.
