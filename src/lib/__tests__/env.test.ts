@@ -1,19 +1,19 @@
 import { afterEach, expect, it, vi } from 'vitest';
-import { thisAppHost } from '../env';
+import { APP_SLUG, authServiceUrl } from '../env';
 
 afterEach(() => {
   vi.unstubAllEnvs();
 });
 
-it('thisAppHost returns the host of NEXT_PUBLIC_APP_URL', () => {
-  vi.stubEnv('NEXT_PUBLIC_APP_URL', 'https://dev.example.test/links');
-  expect(thisAppHost()).toBe('dev.example.test');
+it('APP_SLUG is the registry slug, never derived from NEXT_PUBLIC_APP_URL (imajin-ai#2706)', () => {
+  vi.stubEnv('NEXT_PUBLIC_APP_URL', 'https://dev-jin.imajin.ai/links');
+  expect(APP_SLUG).toBe('links');
+  expect(APP_SLUG).toMatch(/^[a-z][a-z0-9-]{0,38}$/);
 });
 
-it.each([
-  ['unset', '', /is not set/],
-  ['invalid', 'not a url', /not a valid URL/],
-])('thisAppHost throws instead of falling back when NEXT_PUBLIC_APP_URL is %s', (_name, appUrl, message) => {
-  vi.stubEnv('NEXT_PUBLIC_APP_URL', appUrl);
-  expect(() => thisAppHost()).toThrow(message);
+it('authServiceUrl returns AUTH_SERVICE_URL and throws when it is unset', () => {
+  vi.stubEnv('AUTH_SERVICE_URL', 'https://dev-jin.imajin.ai/auth');
+  expect(authServiceUrl()).toBe('https://dev-jin.imajin.ai/auth');
+  vi.stubEnv('AUTH_SERVICE_URL', '');
+  expect(() => authServiceUrl()).toThrow(/AUTH_SERVICE_URL is not set/);
 });

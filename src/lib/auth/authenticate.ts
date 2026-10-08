@@ -1,5 +1,5 @@
 import { requireSessionOrAppToken } from '@ima-jin/auth';
-import { thisAppHost } from '@/lib/env';
+import { APP_SLUG } from '@/lib/env';
 
 /**
  * This app's entire inbound-auth surface, deliberately funneled through one
@@ -10,6 +10,10 @@ import { thisAppHost } from '@/lib/env';
  * reference adoption of the #1069 Phase 1 scoped app-token) so a future
  * change to the underlying mechanism is a one-file change, not a
  * route-by-route migration.
+ *
+ * The token audience is this app's registry slug (`links`), never the shared
+ * host (imajin-ai#2706); `IMAJIN_APP_AUD` overrides it inside `@ima-jin/auth`.
+ * A Bearer that fails verification is a 401 — it never falls back to the cookie.
  *
  * `requireSessionOrAppToken` accepts EITHER a scoped
  * `Authorization: Bearer <app-token>` OR the shared kernel session cookie as
@@ -38,7 +42,7 @@ export interface AuthenticateOptions {
 
 export async function authenticate(request: Request, options?: AuthenticateOptions): Promise<AuthenticateResult> {
   const result = await requireSessionOrAppToken(request, {
-    aud: thisAppHost(),
+    slug: APP_SLUG,
     requireScopes: options?.requireScopes,
   });
   if ('error' in result) {
