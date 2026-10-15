@@ -35,6 +35,46 @@ function envNamesIn(source: string): string[] {
   return [...names];
 }
 
+describe('imajin.app.json provisioning contract', () => {
+  const manifest = JSON.parse(read('imajin.app.json')) as {
+    secrets: Array<{ name: string; kind: string }>;
+  };
+
+  it('parses as a secrets-only object with an explicit declared-none list', () => {
+    // No random self-secret is consumed. Signing/bootstrap keys, claim codes,
+    // database credentials and kernel-owned API keys are not random recipes.
+    // Do not invent links:write: routes enforce ownership, not that scope.
+    expect(manifest).toEqual({ secrets: [] });
+  });
+
+  it('matches the kernel AppManifest and validateSecrets recipe constraints', () => {
+    // Contract: imajin-ai apps/kernel/src/lib/github/org-provisioning.ts and
+    // src/lib/apps/secret-declarations.ts (also PR #2814). Keep this app
+    // standalone: no imports from the kernel's implementation.
+    expect(Object.keys(manifest)).toEqual(['secrets']);
+    expect(Array.isArray(manifest.secrets)).toBe(true);
+    expect(manifest.secrets.length).toBeLessThanOrEqual(32);
+    expect(new Set(manifest.secrets.map(({ name }) => name)).size).toBe(manifest.secrets.length);
+    for (const secret of manifest.secrets) {
+      expect(Object.keys(secret).sort()).toEqual(['kind', 'name']);
+      expect(secret.name).toMatch(/^[A-Z][A-Z0-9_]{0,63}$/);
+      expect(['random-32B', 'random-64B']).toContain(secret.kind);
+    }
+  });
+
+  it('only declares secret names read by the app, never documentation or test fixtures', () => {
+    const files = [
+      ...walk(join(ROOT, 'app')),
+      ...walk(join(ROOT, 'src')),
+      join(ROOT, 'instrumentation.ts'),
+      join(ROOT, 'middleware.ts'),
+    ];
+    const consumed = new Set(files.flatMap((file) => envNamesIn(readFileSync(file, 'utf8'))));
+    const unread = manifest.secrets.filter(({ name }) => !consumed.has(name)).map(({ name }) => name);
+    expect(unread).toEqual([]);
+  });
+});
+
 describe('env contract coverage', () => {
   const manifest = new Set(ENV_VAR_NAMES);
 
