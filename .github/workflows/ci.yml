@@ -188,6 +188,9 @@ jobs:
         run: |
           mkdir -p /tmp/sonar-payload
           rsync -a --exclude='.git' --exclude='node_modules' --exclude='.next' --exclude='.imajin' ./ /tmp/sonar-payload/
+          # workflow_run itself has main's SHA. Bind the scanner to this
+          # snapshot's PR head, not the privileged workflow's revision.
+          printf '\nsonar.scm.revision=%s\n' '${{ github.event.pull_request.head.sha }}' >> /tmp/sonar-payload/sonar-project.properties
           cat > /tmp/sonar-payload/.sonar-pr-meta.json <<JSON
           {
             "prNumber": ${{ github.event.pull_request.number }},

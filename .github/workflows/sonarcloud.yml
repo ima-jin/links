@@ -36,6 +36,16 @@ name: SonarCloud
 # script itself.
 
 on:
+  workflow_dispatch:
+    inputs:
+      pull_request:
+        description: PR number to check for unresolved issues
+        required: true
+        type: string
+      analysis_task:
+        description: Completed Sonar task ID from this head's scanner log
+        required: true
+        type: string
   push:
     branches: [main]
   workflow_run:
@@ -48,6 +58,42 @@ permissions:
   actions: read # to download the sonar-payload artifact from the triggering CI run
 
 jobs:
+  verify-analysis:
+    if: github.event_name == 'workflow_dispatch'
+    name: Verify Sonar unresolved issues and gate
+    runs-on: ubuntu-latest
+    permissions: {}
+    env:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      PR_NUMBER: ${{ inputs.pull_request }}
+      ANALYSIS_TASK: ${{ inputs.analysis_task }}
+    steps:
+      # No checkout or app code: only read-only requests to the fixed Sonar API.
+      - name: Verify completed analysis and unresolved PR issues
+        shell: bash
+        run: |
+          [[ "$PR_NUMBER" =~ ^[1-9][0-9]*$ ]] || exit 1
+          [[ "$ANALYSIS_TASK" =~ ^[A-Za-z0-9_-]+$ ]] || exit 1
+          test -n "$SONAR_TOKEN"
+          task=$(mktemp)
+          gate=$(mktemp)
+          issues=$(mktemp)
+          curl --fail --silent --show-error --header "Authorization: Bearer ${SONAR_TOKEN}" \
+            --get https://sonarcloud.io/api/ce/task \
+            --data-urlencode "id=${ANALYSIS_TASK}" > "$task"
+          analysis=$(jq -er '.task | select(.status == "SUCCESS" and .componentKey == "ima-jin_links") | .analysisId' "$task")
+          curl --fail --silent --show-error --header "Authorization: Bearer ${SONAR_TOKEN}" \
+            --get https://sonarcloud.io/api/qualitygates/project_status \
+            --data-urlencode "analysisId=${analysis}" > "$gate"
+          curl --fail --silent --show-error --header "Authorization: Bearer ${SONAR_TOKEN}" \
+            --get https://sonarcloud.io/api/issues/search \
+            --data-urlencode componentKeys=ima-jin_links \
+            --data-urlencode "pullRequest=${PR_NUMBER}" \
+            --data-urlencode resolved=false --data-urlencode ps=1 > "$issues"
+          jq -r '"Quality gate: " + .projectStatus.status' "$gate"
+          jq -r '"Unresolved PR issues (all, not only new): " + (.paging.total | tostring)' "$issues"
+          jq -e '.projectStatus.status == "OK"' "$gate"
+          jq -e '.paging.total == 0' "$issues"
   sonarcloud-push:
     if: github.event_name == 'push'
     name: SonarCloud
